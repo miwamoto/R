@@ -138,8 +138,17 @@ cor(data$mage, data$bwght, use = "complete.obs")
 cor(data$fwhte, data$bwght, use = "complete.obs")
 cor(data$feduc, data$bwght, use = "complete.obs")
 ```
+Further, to understand how these various factors influence a healthy outcome, We define a new variable. Birthweight and high APGAR scores are both measures of infant well-being.  Therefore, we create a variable `bbscore` (baby score) which is calculated by adding the five minute APGAR score with a weighted one minute APGAR score and then multiplying the result with the birth weight.  In weighting the one minute score, an assumption is made that although there is more variability in the one-minute score, overall, the five-minute score is a better indicator of the baby's condition.
 
+```{R}
+data$bbscore <- ((data$fmaps + (data$omaps*0.8)) * data$bwght)
+```
+In addition to accounting for factors other than birth weight, one advantage of using this new measure of outcome is that this APGAR factor adds variance and spreads out the curve.  Note that the curve resembles a normal distribution.
 
+```{R}
+hist(data$bbscore, breaks = 50, main = "Histogram of Baby Health (bbscore)", xlab = "bbscore")
+summary(data$bbscore)
+```
 
 ***
 
