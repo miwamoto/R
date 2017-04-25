@@ -150,18 +150,50 @@ hist(data$bbscore, breaks = 50, main = "Histogram of Baby Health (bbscore)", xla
 summary(data$bbscore)
 ```
 
+
 ***
 
 3. A minimum of three model specifications.  In particular, you should include
 
 - One model with only the explanatory variables of key interest.
+## Modeling Healthy Outcomes
+### Model 1
+
+For our initial model, our explanatory variables are `npvis`  - number for primary care visits, `cigs`  - number of cigarettes smoked per day and `drink` - average number of drinks per week. 
+
+```{R}
+model1 <- lm(bbscore ~ npvis + cigs + drink, data = data)
+model1
+```
 
 - One model that includes only covariates that you believe increase the accuracy of your results without introducing bias.
+### Model 2 
 
 - One model that includes the previous covariates, but also covariates that may be problematic for one reason or another.  
-
+### Model 3
 
 4. For your first model, a detailed assessment of the 6 CLM assumptions.  For additional models, you should check all assumptions, but only highlight major differences from your first model in your report.
+
+## CLM Assumptions
+
+### CLM Assumption 1 (Guass-Markov 1) 
+
+For all three models, We make the weak assumption that there is linearity in the parameters and use the linear regression model.
+
+### CLM Assumption 2 (Guass-Markov 2)
+### CLM Assumption 3 (Guass-Markov 3)
+### CLM Assumption 4 (Guass-Markov 4)
+CLM 4 is a strong assumption, therefore we must check for zero conditional mean for our models to be valid.
+For model1, we examine the Residuals verses Fitted Values plot.  We note tha on the lower and upper extremes there are few data points which may account for slight variation from zero.  Otherwise the data indicate that this assumption holds, as the mean of the residual values are centered at 0. 
+
+```{R}
+plot(model1, which = 1)
+```
+
+### CLM Assumption 5 (Guass-Markov 5)
+### CLM Assumption 6
+
+
 
 5. A well-formatted regression table summarizing your model results.  Make sure that standard errors presented in this table are valid.  Also be sure to comment on both statistical and practical significance.
 
