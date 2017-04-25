@@ -1,0 +1,164 @@
+---
+title: "Lab 4: Does Prenatal Care Improve Infant Health?"
+author: "w203: Statistics for Data Science"
+
+date: "April 10, 2017"
+output: pdf_document
+---
+
+# Introduction
+
+This is a group lab.  You may work in teams of 2 or 3.
+
+The file bwght\_w203.RData contains data from the National Center for Health Statistics and from birth certificates.  Your team has been hired by a health advocacy group to study this data and help them understand whether prenatal care improves health outcomes for newborn infants.
+
+The file includes a birthweight variable.  Additonally, the one- and five-minute APGAR scores are included.  These are measures of the well being of infants just after birth.
+
+Variable descriptions are provided as follows.
+
+```{r}
+library(car)
+library(ggplot2)
+library(reshape2)
+load("bwght_w203.RData")
+desc
+```
+
+# Assignment
+
+Prepare a report addressing the question of whether prenatal care improves newborn health outcomes.
+
+A successful submission will include
+
+1. A brief introduction
+
+2. A model building process, supported by exploratory analysis.  Your EDA should be interspersed with, and support, your modeling decisions.  In particular, you should use exploratory techniques to address
+
+- What transformations to apply to variables and what new variables should be created.
+
+- What variables should be included in each model
+
+- Whether model assumptions are met
+
+***
+
+##Baby Health Outcomes
+_Add description of the baby score variable and our reasoning._  
+
+*Birth Weight:* Observations of birth weight in the sample are normally distributed, with a slight negative skew. Mean and median birth weight are both approximately 3.2 kg.  
+```{r}
+summary(data$bwght)
+```
+```{r}
+hist(data$bwght, breaks = 20)
+```
+  
+*APGAR Scores:* 
+_Need some discussion here..._
+
+
+##Primary Predictor Variables
+As described above, our modeling process focuses on using APGAR scores and birth weight to measure health outcomes. Reviewing the data available, the two variables most associated with prenatal medical care are the number of prenatal visits (npvis) and the month of the pregnancy in which prenatal care began (monpre). For purposes of modeling, we can create a new varaible to measure the number of months of prenatal care received.  
+```{r}
+data$premonths = 9 - data$monpre
+```
+  
+*Number of Months of Prenatal Care:* This variable is calculated from "data\$monpre", which is the month in which prenatal care began by subtracting "data\$monpre" from 9 months. The median length of prenatal care is `r round(median(data$premonths),2)`, and the data displays a heavy negative skew.  
+
+*Number of Prenatal Visits:* This variable exhibits a wide distribution curve with a sharp spike at 12 visits. Doctors generally recommend a prenatal checkup schedule of one visit per month during the first 6-7 months of pregnancy, followed by more frequent visits in the weeks leading up to delivery. The observed spike is likely the result of a large number of mothers in the sample following this recommendation or a similar schedule.The sample also includes 26 observations with more than 20 prenatal visits, up to a maximum of 40 visits. These outliers could represent difficult pregnancies that required additional medical care, errors in data collection, or both. However, these cases are not excluded from analysis because the large spike in observations at 12 visits limits the effects of these outliers on the sample average. 
+
+```{r}
+layout(matrix(c(1,2), 1, byrow = TRUE))
+hist(data$npvis, breaks = seq(-0.5, 40.5,by=1))
+hist(data$premonths, breaks = seq(-0.5,9.5,by=1), xlim = c(0,10))
+```
+  
+```{r}
+scatterplot(jitter(data$premonths), jitter(data$npvis))
+```
+```{r}
+cor(data$premonths, data$npvis, use = "complete.obs")
+```
+Based on the plot and calculations above, there appears to be a moderate positive correlation between the number of months of prenatal care received and the number of prenatal visits. This is quite natural; expectant mothers who begin care early have more time to visit the doctor before they give birth. The two variables have a moderate correlation, so including them both as predictor variables in the same model would not strictly violate the assumption regarding perfect multicollinearity, but doing so would increase the bias of the model because some number prenatal visits could potentially be explained by duration of care.  
+
+Doctors also commonly recommend that mothers avoid smoking and drinking during their pregnancy as a standard prenatal health practice.
+```{r}
+layout(matrix(c(1,2), 1, byrow = TRUE))
+hist(data$cigs, breaks = 10, labels = TRUE)
+hist(log(data$cigs), breaks = 10, ylim = c(0,60), labels = TRUE)
+```
+  
+As shown in the histograms above, the _cigs_ variable displays a heavy positive skew, as relatively few mothers in the sample smoked during their pregancies, resulting in an extremely non-normal distribution. A more normal distribution can be achieved by applying a logarithmic transformation to the data.  
+
+```{r}
+scatterplot(jitter(data$cigs), jitter(data$bwght))
+```
+
+```{r}
+cor(data$cigs, data$bwght, use = "complete.obs")
+```
+As shown above, the number of cigarettes smoked per day displays a weak negative correlation with birth weight.  
+
+```{r}
+hist(data$drink, breaks = seq(-0.5,8.5,by=1), ylim = c(0,2000), labels = TRUE)
+```
+```{r}
+scatterplot(jitter(data$drink), jitter(data$bwght))
+```
+```{r}
+cor(data$drink, data$bwght, use = "complete.obs")
+```
+  
+  
+##Additional Predictor Variables##  
+To identify additional potential predictor variables, we can examine a correlation heat map.  
+
+```{r}
+qplot(x=Var1, y=Var2, data=melt(cor(data, use="p")), fill=value, geom="tile") +
+   scale_fill_gradient2(limits=c(-1, 1))
+```
+  
+Examining the heat map for correlations, we see that there appear to be positive correlations between birth weight and the age of the mother (_mage_), white fathers (_fwhte_), and the father's education (_feduc_).  
+
+```{r}
+layout(matrix(c(1,2,3,0), 2, byrow = TRUE))
+hist(data$mage, breaks = seq(-0.5, 44.5,by=1), xlim = c(0,50))
+hist(data$fwhte, breaks = seq(-0.5, 1.5,by=1))
+hist(data$feduc, breaks = seq(-0.5, 18.5, by=1), xlim = c(0,20))
+```
+  
+```{r}
+scatterplot(jitter(data$mage), jitter(data$bwght))
+scatterplot(jitter(data$fwhte), jitter(data$bwght))
+scatterplot(jitter(data$feduc), jitter(data$bwght))
+```
+ 
+```{r}
+cor(data$mage, data$bwght, use = "complete.obs")
+cor(data$fwhte, data$bwght, use = "complete.obs")
+cor(data$feduc, data$bwght, use = "complete.obs")
+```
+
+
+
+***
+
+3. A minimum of three model specifications.  In particular, you should include
+
+- One model with only the explanatory variables of key interest.
+
+- One model that includes only covariates that you believe increase the accuracy of your results without introducing bias.
+
+- One model that includes the previous covariates, but also covariates that may be problematic for one reason or another.  
+
+
+4. For your first model, a detailed assessment of the 6 CLM assumptions.  For additional models, you should check all assumptions, but only highlight major differences from your first model in your report.
+
+5. A well-formatted regression table summarizing your model results.  Make sure that standard errors presented in this table are valid.  Also be sure to comment on both statistical and practical significance.
+
+6. A discussion of whether your results can be interpretted causally.  In particular, include a discussion of what variables are not included in your analysis and the likely direction of omitted variable bias.  Also include a discussion of which included variables may bias your results by absorbing some of the causal effect of prenatal care.
+
+7. A brief conclusion with a few high-level takeaways.
+
+
+Please limit all submissions to 30 pages.  Be sure to turn in both your pdf report and also your source code.
