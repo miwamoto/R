@@ -186,7 +186,8 @@ model1
 plot(model1)
 ```
 
-- One model that includes only covariates that you believe increase the accuracy of your results without introducing bias.
+- One model that includes only covariates that you believe increase the accuracy of your results without introducing bias.  
+### Model 2  
 ```{R}
 model2 <- lm(bbscore ~ npvis + cigs + drink + mage + male + feduc + fblck, data = data)
 model2
@@ -194,13 +195,13 @@ plot(model2)
 ```
 
 - One model that includes the previous covariates, but also covariates that may be problematic for one reason or another. 
+### Model 3  
+
 ```{R}
 model3 <- lm(bbscore ~ npvis + cigs + drink + mage + male + feduc + fblck + meduc + mblck + monpre, data = data)
 model3
 plot(model3)
 ```
-
-### Model 3
 
 4. For your first model, a detailed assessment of the 6 CLM assumptions.  For additional models, you should check all assumptions, but only highlight major differences from your first model in your report.
 
