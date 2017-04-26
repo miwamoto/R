@@ -75,7 +75,7 @@ hist(data$bbscore, breaks = 50, main = "Histogram of Baby Health (bbscore)", xla
 summary(data$bbscore)
 ```
 
-It's important to note that this baby score variable is not perfect, but for the reasons outlined above, it is a better measure than simply using birthweight alone. If we had only used birthweight, we would essentially be saying that the heavier the baby, the healtier it is, and this is not always true. Multiplying their birthweight number by APGAR allows for bigger babies with a lower health score to fall lower on the spectrum, as they should. 
+It's important to note that this baby score variable is not a perfect indicator of baby health, but for the reasons outlined above, it is a better measure than simply using birthweight alone. If we had only used birthweight, we would essentially be saying that the heavier the baby, the healtier it is, and this is not always true. Multiplying their birthweight number by APGAR allows for bigger babies with a lower health score to fall lower on the spectrum, as they should. 
   
 ## Primary Predictor Variables
 As described above, our modeling process focuses on using APGAR scores and birth weight to measure health outcomes. Reviewing the data available, the two variables most associated with prenatal medical care are the number of prenatal visits (npvis) and the month of the pregnancy in which prenatal care began (monpre). For purposes of modeling, we can create a new variable to measure the number of months of prenatal care received.  
@@ -170,9 +170,9 @@ scatterplot(jitter(data$feduc), jitter(data$bbscore))
 ```
  
 ```{r}
-cor(data$mage, data$bbscore, use = "complete.obs")
-cor(data$fwhte, data$bbscore, use = "complete.obs")
-cor(data$feduc, data$bbscore, use = "complete.obs")
+cor(data$mage, data$bbscore)
+cor(data$fwhte, data$bbscore)
+cor(data$feduc, data$bbscore)
 ```
   
 
@@ -258,16 +258,13 @@ There is a huge spread in these scores. Say the baby had a mean score of 53,830.
 
 ## Model 2  
 
-In the second model, we added in more variables: mother age, father education, whether or not the baby was male, and whether or not the father was black. These are not necesarily indicators of prenatal care, but we hypothesized that adding additional variables would increase the accuracy of our model. In or correlation analysis above during our exploratory data analysis, we found that feduc and fblck . We only included one factor for race and education, as correlations between mother education and father education as well as mother race with father race would introduce increased bias to our model.
+In the second model, we added in more variables: mother age, father education, whether or not the baby was male, and whether or not the father was black. These are not necesarily indicators of prenatal care, but we hypothesized that adding additional variables would increase the accuracy of our model for predicting baby score. In or correlation analysis above during our exploratory data analysis, we found that feduc and fblck were the most highly correlated with baby scores of all the race and education variables. We only included one factor for race and education, as correlations between mother education and father education as well as mother race with father race would introduce increased bias to our model.
 
 ```{R}
-model2 <- lm(bbscore ~ npvis + cigs + drink + mage + male + feduc + fblck, data = data)
+model2 <- lm(bbscore ~ npvis + cigs + drink + mage + male + feduc + fblck, data = data) 
 model2
 ```
   
-```{r}
-coeftest(model2, vcov = vcovHC)
-```
   
 ```{r}
 layout(matrix(c(1,2,3,4), 2, byrow = TRUE))
@@ -307,7 +304,7 @@ Homoskedasticity - To verify this assumption, we again look at our residuals ver
 bptest(model2)
 ```
   
-With a p-value of 0.201, we cannot reject the null hypothesis of homoskedasticity.  Therefore, this assumption holds.  
+With a high p-value of 0.201, we cannot reject the null hypothesis. As it did with model 1, this assumption holds, and there is no need for robust standard errors.  
 
 #### CLM Assumption 6
 Normality - As with our original model, we want to show that the population error is independent of our explanatory variables and normally distributed.
@@ -315,17 +312,24 @@ Normality - As with our original model, we want to show that the population erro
 hist(model2$residuals, main = "Histogram of Residuals", breaks = 20, xlab = "Model 2 Residuals",
      xlim = c(-60000,40000))
 ```
-We see that the distribution resembles a normal distribution.  There is a slight negative skew, but this is nothing to worry about given the large sample size. 
+We see that the distribution resembles a normal distribution.  There is a slight negative skew, but this is nothing to worry about given the large sample size.
+
+*Analysis of Results*: 
+
+```{r}
+coeftest(model2)
+```
+Once again, the number of visits produced a significant coefficient. Holding all of these independent variables constant, the number of visits did actually go down slightly from the previous model (from + 285 to +275), likely because of adding in other variables that were causing further bias to it when these variables were omitted in model 1. These coefficients can be interpreted the same way as they were in model 1, with the exception of the indicator variables. The male coeficient (whether or not the baby was male) now has to be interpreted as: males on average received a higher baby score than females by 1,441 baby score points, holding all other variables constant. This does have a high rate of variability (standard error of 531), so this specific number may not be too accurate when looking at the true population model.
+
+The standard errors produced be the mother's education (feduc) and the father being black or not (fblck) were extremely high, meaning they don't hold much weight and contain lots of variability in our model. The also do not have significant p-values. This is due to the unbalanced distributions of their variables, discussed in our correlation analysis earlier.
 
 ## Model 3  
+
+For model 3, we built off of model 2, but added in variables we knew were correlated, hoping that although we were increasing variability because of the increased correlation in independent variables, we'd also see a more accurate model with an increased number of variables being accounted for. The variables we added were monpre (correlated with number of visits), meduc (shown to be correlated with father education), and mblck (correlated with fblck). 
 
 ```{R}
 model3 <- lm(bbscore ~ npvis + cigs + drink + mage + male + feduc + fblck + meduc + mblck + monpre, data = data)
 model3
-```
-
-```{r}
-coeftest(model3, vcov = vcovHC)
 ```
   
 ```{r}
@@ -354,18 +358,17 @@ Looking at the correlation matrix above we can verify that none of our variables
 ```{r}
 vif(model3)
 ```  
-Examining our variable inflation factors we see evidence  of multicollinearity in our model. In particular, the variables fblck and mblck have high VIFs.  This may be due to a relationship between these to variables and suggests that the incidence of parents being of the same race is not random. Also, looking back at the correlation heat map generated as part of our exploratory data analysis, we can see that correlation exists between variables feduc and meduc, as well as fblck and mblck. Based on this, this inclusion of these additional variables may have introduced bias into Model 3.
+Examining our variable inflation factors we see evidence  of multicollinearity in our model. In particular, the variables fblck and mblck have high VIFs.  This may be due to a relationship between these two variables and suggests that the incidence of parents being of the same race is not random. Also, looking back at the correlation heat map generated as part of our exploratory data analysis, we can see that correlation exists between variables feduc and meduc, as well as fblck and mblck. Based on this, this inclusion of these additional variables may have introduced bias into Model 3.
 
 #### CLM Assumption 4
 Zero Conditional Mean - Similar to models 1 and 2.  This assumption holds.
-
 
 #### CLM Assumption 5 
 Homoskedasticity - To verify this assumption, we again look at our residuals verses fitted plot.  In this plot, we see evidence of heteroskedasticity. So, we will run the Breusch-Pagan test.
 ```{R}
 bptest(model3)
 ```
-With a p-value of 0.03569, we reject the null hypothesis of homoskedasticity, and this assumption does not hold.  However, with a large sample (more than 1,800 observations) we can rely on OLS asymptotics.
+Similar to what we saw in the other models, we can assume homoskedasticity
 
 #### CLM Assumption 6
 Normality - As with our original model, we want to show that the population error is independent of our explanatory variables and normally distributed.
@@ -373,8 +376,14 @@ Normality - As with our original model, we want to show that the population erro
 hist(model3$residuals, main = "Histogram of Residuals", breaks = 20, xlab = "Model 3 Residuals",
      xlim = c(-60000,40000))
 ```
-## Model 4 
-After the CLM analysis revealed a violation of the Gauss-Markov assumption 3, we remove one of the collinear variables, fblck, from the model and recheck the VIFs.
+```{r}
+coeftest(model3)
+```
+*Analysis of Model:* 
+One needs to be very careful in interpreting the above coeficient test, as the added variability of correlated variables could be skewing the results. This model is an attempt to hold lots of factors constant, but in reality due to the correlation between some intependent variables, it's not truly able to hold them constant.
+~~~
+After the CLM analysis revealed a violation of the Gauss-Markov assumption 3, we remove one of the collinear variables, fblck, from the model and recheck the VIFs. We kept monpre in, as the VIF was surprisingly low.
+
 ```{R}
 model4 <- lm(bbscore ~ npvis + cigs + drink + mage + male + feduc + meduc + mblck + monpre, data = data)
 model4
@@ -382,15 +391,18 @@ vif(model4)
 ```
 This model reduced collinearity of the variables. The new variable inflation factors are now all in the low range.  
 
-##Summary of Modeling Results   
+##Summary of Modeling Results
+
+We created the following regression table to compare our model results to each other:
 
 ```{R}
 stargazer(model1, model2, model3, model4, type = "text", omit.stat = "f",
           star.cutoffs = c(0.05, 0.01, 0.001))
 ```
 
-6. A discussion of whether your results can be interpreted causally.  In particular, include a discussion of what variables are not included in your analysis and the likely direction of omitted variable bias.  Also include a discussion of which included variables may bias your results by absorbing some of the causal effect of prenatal care.
-
+```{R}
+AIC(model1, model2, model3, model4)
+```
 *Discussion on Causality:* This is not a true experiment with randomly assigned variables and controls, so many purists would consider this unable to be interpreted causally just for that reason. Regression analyses are more about giving insight into associations between variables, and readers must be very careful about automatically assuming effects are causal. Aside from these two points, we also have reason to believe that there are enough omitted variables in this dataset that are contributing to a heavy increase in bias, meaning none of our model results should be interpreted causally. 
 
 It's important to remember that we're not working within the true population model, and that these are just sample models. By not including some of the variables that are likely to be a part of the true population model, we're introducing bias into our error term, which is either artificially lowering or increasing values of the coefficients in our sample (when in the true population model, the coefficients wouldn't have these values). 
@@ -406,6 +418,8 @@ Number of prenatal vitamins = intercept + npvis + error
 We would expect that the number of prenatal vitamins the mother took would increase as the mother went to the prenatal care, as this is an indicator of mother being proactive towards their baby's health, and that prenatal care alone would also increase the baby score. Since these attributes are both positive, we would expect the regression coefficient for npvis to be driven upwards by omitted variable bias. This is a sign that this coefficient for number of visits is not as conservative as it should be, causing the model to have bias.
 
 Other variables that are not in the model that should have been considered when collecting data for the sample for prenatal care were timing of visits by trimester, checking on pre-existing conditions or illnesses the mother may have had, whether or not the mother did pregnancy yoga or exercised regularly, and stress levels. 
+
+We also have to be careful about the directions of these results (the dependent variable causing independent variables to be a certain way). It's entirely possible that there were mothers who knew they would have unhealthy babies, and the cause of their increase in prenatal care visits had to do with this. 
 
 In summary, the ceteris paribus assumption is key here, as it holds all of the variables we included in the model (other than the error term) constant, but NOT the error term. But if there's another factor in our error term that is correlated with one of our variables, this increases our risk of producing an inaccurate model that cannot be interpreted causally. 
 
