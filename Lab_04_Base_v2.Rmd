@@ -1,0 +1,242 @@
+---
+title: "Lab 4: Does Prenatal Care Improve Infant Health?"
+author: "w203 Section 4: Jessica Economou, Kevin Gifford, Mona Iwamoto"
+
+date: "April 27, 2017"
+output: pdf_document
+---
+
+# Introduction
+
+This is a group lab.  You may work in teams of 2 or 3.
+
+The file bwght\_w203.RData contains data from the National Center for Health Statistics and from birth certificates.  Your team has been hired by a health advocacy group to study this data and help them understand whether prenatal care improves health outcomes for newborn infants.
+
+The file includes a birthweight variable.  Additonally, the one- and five-minute APGAR scores are included.  These are measures of the well being of infants just after birth.
+
+Variable descriptions are provided as follows.
+
+```{r}
+library(car)
+library(ggplot2)
+library(reshape2)
+library(stargazer)
+load("bwght_w203.RData")
+desc
+```
+
+# Assignment
+
+Prepare a report addressing the question of whether prenatal care improves newborn health outcomes.
+
+A successful submission will include
+
+1. A brief introduction
+
+2. A model building process, supported by exploratory analysis.  Your EDA should be interspersed with, and support, your modeling decisions.  In particular, you should use exploratory techniques to address
+
+- What transformations to apply to variables and what new variables should be created.
+
+- What variables should be included in each model
+
+- Whether model assumptions are met
+
+***
+
+##Baby Health Outcomes
+
+*Birth Weight:* Observations of birth weight in the sample are almost normally distributed, with a slight negative skew. Mean and median birth weight are both approximately 3.2 kg.
+```{r}
+summary(data$bwght)
+```
+```{r}
+hist(data$bwght, breaks = 20)
+```
+  
+*APGAR Scores:* APGAR Scores in this dataset were strongly negatively skewed. The one minute APGAR had slighly more variation than the 5 minute, as `r sum(data$fmaps == 9, na.rm = T)/length(data$fmaps) * 100` percent of the 5 minute APGAR scores were a 9, and only `r sum(data$omaps == 9, na.rm = T)/length(data$omaps) * 100` percent of 1 minute APGAR scores were a score of 9 (also the mode, but scores in this 1 minute APGAR had more of a variation). After researching the meaning of the APGAR scores, we felt it necessary to include these in our measure for baby health, as they are meant to be a quick assessment on how the baby is doing outside the womb.
+```{R}
+summary(data$fmaps)
+summary(data$omaps)
+```
+
+```{R}
+layout(matrix(c(1,2), 1, byrow = TRUE))
+hist(data$omaps, main = "1 Min APGAR Scores Histogram")
+hist(data$fmaps, main = "5 Min APGAR Scores Histogram")
+```
+
+*New Variable - Baby Score:* Given the nature of these variables, we defined a new variable that takes both birthweight and APGAR scores into account called `bbscore`, or Baby Score. This was calculated by adding the five minute APGAR score with a weighted one minute APGAR score and then multiplying the result with the birth weight.  We weighted the one-minute score by a factor of 80%, because doing this allowed for the 5-minute measure to hold more weight in the overall score (as the 5-minute APGAR is a better indicator on the baby's actual health, and the one-minute is more of an assessment on how the baby handled the birthing process). We did not think excluding the 1-minute score was a good idea, as this measure did have more variability and still tells of the baby's health at a certain point in time.
+
+```{R}
+data$bbscore <- ((data$fmaps + (data$omaps*0.8)) * data$bwght)
+```
+In addition to accounting for factors other than birth weight, one advantage of using this new measure of outcome is that this APGAR factor adds variance and spreads out the curve.  Note that the curve resembles a normal distribution.
+
+```{R}
+hist(data$bbscore, breaks = 50, main = "Histogram of Baby Health (bbscore)", xlab = "bbscore")
+summary(data$bbscore)
+```
+
+
+
+
+##Primary Predictor Variables
+As described above, our modeling process focuses on using APGAR scores and birth weight to measure health outcomes. Reviewing the data available, the two variables most associated with prenatal medical care are the number of prenatal visits (npvis) and the month of the pregnancy in which prenatal care began (monpre). For purposes of modeling, we can create a new variable to measure the number of months of prenatal care received.  
+```{r}
+data$premonths = 9 - data$monpre
+```
+  
+*Number of Months of Prenatal Care:* This variable is calculated from "data\$monpre", which is the month in which prenatal care began by subtracting "data\$monpre" from 9 months. The median length of prenatal care is `r round(median(data$premonths),2)`, and the data displays a heavy negative skew.  
+
+*Number of Prenatal Visits:* This variable exhibits a wide distribution curve with a sharp spike at 12 visits. Doctors generally recommend a prenatal checkup schedule of one visit per month during the first 6-7 months of pregnancy, followed by more frequent visits in the weeks leading up to delivery. The observed spike is likely the result of a large number of mothers in the sample following this recommendation or a similar schedule.The sample also includes 26 observations with more than 20 prenatal visits, up to a maximum of 40 visits. These outliers could represent difficult pregnancies that required additional medical care, errors in data collection, or both. However, these cases are not excluded from analysis because the large spike in observations at 12 visits limits the effects of these outliers on the sample average. 
+
+```{r}
+layout(matrix(c(1,2), 1, byrow = TRUE))
+hist(data$npvis, breaks = seq(-0.5, 40.5,by=1))
+hist(data$premonths, breaks = seq(-0.5,9.5,by=1), xlim = c(0,10))
+```
+  
+```{r}
+scatterplot(jitter(data$premonths), jitter(data$npvis))
+```
+```{r}
+cor(data$premonths, data$npvis, use = "complete.obs")
+```
+Based on the plot and calculations above, there appears to be a moderate positive correlation between the number of months of prenatal care received and the number of prenatal visits. This is quite natural; expectant mothers who begin care early have more time to visit the doctor before they give birth. The two variables have a moderate correlation, so including them both as predictor variables in the same model would not strictly violate the assumption regarding perfect multicollinearity, but doing so would increase the bias of the model because some number prenatal visits could potentially be explained by duration of care.  
+
+We did noticed that there were two cases where the mother started getting prenatal care very late (in the last month of their pregnancy), yet visited the doctor 30 times. We thought this was strange, so we analyzed these two data points closer to see if we found anything else strange about these two data points that would require them to be removed:
+
+```{r}
+data[!is.na(data$npvis) & data$npvis >=30 & data$premonths == 1,]
+```
+These don't appear to be "bad data" points judging by the rest of the data, so we made the decision to leave them in, yet be weary of their impact as possible outliers.
+
+Doctors also commonly recommend that mothers avoid smoking and drinking during their pregnancy as a standard prenatal health practice. For this reason, we decided to analyze these two variables individually as well.
+```{r}
+layout(matrix(c(1,2), 1, byrow = TRUE))
+hist(data$cigs, breaks = 10, labels = TRUE)
+hist(log(data$cigs), breaks = 10, ylim = c(0,60), labels = TRUE)
+```
+  
+As shown in the histograms above, the _cigs_ variable displays a heavy positive skew, as relatively few mothers in the sample smoked during their pregancies, resulting in an extremely non-normal distribution. A more normal distribution can be achieved by applying a logarithmic transformation to the data.
+
+```{r}
+scatterplot(jitter(data$cigs), jitter(data$bwght))
+```
+
+```{r}
+cor(data$cigs, data$bwght, use = "complete.obs")
+```
+As shown above, the number of cigarettes smoked per day displays a weak negative correlation with birth weight.  
+
+```{r}
+hist(data$drink, breaks = seq(-0.5,8.5,by=1), ylim = c(0,2000), labels = TRUE)
+```
+```{r}
+scatterplot(jitter(data$drink), jitter(data$bwght))
+```
+```{r}
+cor(data$drink, data$bwght, use = "complete.obs")
+```
+  
+  
+##Additional Predictor Variables##  
+To identify additional potential predictor variables, we can examine a correlation heat map.  
+
+```{r}
+qplot(x=Var1, y=Var2, data=melt(cor(data, use="p")), fill=value, geom="tile") +
+   scale_fill_gradient2(limits=c(-1, 1))
+```
+  
+Examining the heat map for correlations, we see that there appear to be positive correlations between birth weight and the age of the mother (_mage_), white fathers (_fwhte_), and the father's education (_feduc_).  
+
+```{r}
+layout(matrix(c(1,2,3,0), 2, byrow = TRUE))
+hist(data$mage, breaks = seq(-0.5, 44.5,by=1), xlim = c(0,50))
+hist(data$fwhte, breaks = seq(-0.5, 1.5,by=1))
+hist(data$feduc, breaks = seq(-0.5, 18.5, by=1), xlim = c(0,20))
+```
+  
+```{r}
+scatterplot(jitter(data$mage), jitter(data$bwght))
+scatterplot(jitter(data$fwhte), jitter(data$bwght))
+scatterplot(jitter(data$feduc), jitter(data$bwght))
+```
+ 
+```{r}
+cor(data$mage, data$bwght, use = "complete.obs")
+cor(data$fwhte, data$bwght, use = "complete.obs")
+cor(data$feduc, data$bwght, use = "complete.obs")
+```
+
+***
+
+3. A minimum of three model specifications.  In particular, you should include
+
+- One model with only the explanatory variables of key interest.
+## Modeling Healthy Outcomes
+### Model 1
+
+For our initial model, our explanatory variables are `npvis`  - number for primary care visits, `cigs`  - number of cigarettes smoked per day and `drink` - average number of drinks per week. We also excluded any mothers under the age of 18 and over the age of 35, as there are widely known health complications within these ages. It's important to note that because of this restriction, our model provided is for women over age 18 and under age 35 only.
+
+```{R}
+data1 <- data[data$mage > 18 & data$mage < 35,]
+model1 <- lm(bbscore ~ npvis + cigs + drink, data = data1)
+model1
+plot(model1)
+```
+
+- One model that includes only covariates that you believe increase the accuracy of your results without introducing bias.
+```{R}
+model2 <- lm(bbscore ~ npvis + cigs + drink + mage + male + feduc + fblck, data = data)
+model2
+plot(model2)
+```
+
+- One model that includes the previous covariates, but also covariates that may be problematic for one reason or another. 
+```{R}
+model3 <- lm(bbscore ~ npvis + cigs + drink + mage + male + feduc + fblck + meduc + mblck + monpre, data = data)
+model3
+plot(model3)
+```
+
+### Model 3
+
+4. For your first model, a detailed assessment of the 6 CLM assumptions.  For additional models, you should check all assumptions, but only highlight major differences from your first model in your report.
+
+## CLM Assumptions
+
+### CLM Assumption 1 (Guass-Markov 1) 
+Linear population model - For all three models, We make the weak assumption that there is linearity in the parameters and use the linear regression model.
+
+### CLM Assumption 2 (Guass-Markov 2)
+Random Sampling - The supplied dataset `bwght\_w203.RData` contains data from the National Center for Health Statistics. The National Center for Health Statistics is the nation’s principal health statistics agency and its data is used for health policy decisions and national research. They cite their sources and birth certificates, patient medical records, personal interviews, lab tests and facility information. The center has adopted high standards for survey design and data collection.  The methodoly is described at `https://www.cdc.gov/nchs/data/factsheets/factsheet_health_statistics.htm` 
+Based on this information, we assume that the subset of data provided for this analysis is a valid random sample.
+
+### CLM Assumption 3 (Guass-Markov 3)
+### CLM Assumption 4 (Guass-Markov 4)
+CLM 4 is a strong assumption, therefore we must check for zero conditional mean for our models to be valid.
+For model1, we examine the Residuals verses Fitted Values plot.  We note tha on the lower and upper extremes there are few data points which may account for slight variation from zero.  Otherwise the data indicate that this assumption holds, as the mean of the residual values are centered at 0. 
+
+```{R}
+plot(model1, which = 1)
+```
+
+### CLM Assumption 5 (Guass-Markov 5)
+### CLM Assumption 6
+
+
+
+5. A well-formatted regression table summarizing your model results.  Make sure that standard errors presented in this table are valid.  Also be sure to comment on both statistical and practical significance.
+
+```{R}
+stargazer(model1, model2, model3, type = "text", omit.stat = "f",
+          star.cutoffs = c(0.05, 0.01, 0.001))
+```
+
+6. A discussion of whether your results can be interpretted causally.  In particular, include a discussion of what variables are not included in your analysis and the likely direction of omitted variable bias.  Also include a discussion of which included variables may bias your results by absorbing some of the causal effect of prenatal care.
+
+7. A brief conclusion with a few high-level takeaways.
+
+
+Please limit all submissions to 30 pages.  Be sure to turn in both your pdf report and also your source code.
