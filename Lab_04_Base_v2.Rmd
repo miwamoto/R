@@ -12,7 +12,7 @@ This is a group lab.  You may work in teams of 2 or 3.
 
 The file bwght\_w203.RData contains data from the National Center for Health Statistics and from birth certificates.  Your team has been hired by a health advocacy group to study this data and help them understand whether prenatal care improves health outcomes for newborn infants.
 
-The file includes a birthweight variable.  Additonally, the one- and five-minute APGAR scores are included.  These are measures of the well being of infants just after birth.
+The file includes a birthweight variable.  Additionally, the one- and five-minute APGAR scores are included.  These are measures of the well being of infants just after birth.
 
 Variable descriptions are provided as follows.
 
@@ -56,7 +56,7 @@ hist(data$bwght, breaks = 20, main = "Histogram of Birth Weight", ylim = c(0,300
      xlab = "Birth weight in grams")
 ```
   
-*APGAR Scores:* APGAR Scores in this dataset were strongly negatively skewed. The one minute APGAR had slighly more variation than the 5 minute, as `r sum(data$fmaps == 9, na.rm = T)/length(data$fmaps) * 100` percent of the 5 minute APGAR scores were a 9, and only `r sum(data$omaps == 9, na.rm = T)/length(data$omaps) * 100` percent of 1 minute APGAR scores were a score of 9 (also the mode, but scores in this 1 minute APGAR had more of a variation). After researching the meaning of the APGAR scores, we felt it necessary to include these in our measure for baby health, as they are meant to be a quick assessment on how the baby is doing outside the womb.
+*APGAR Scores:* APGAR Scores in this dataset were strongly negatively skewed. The one minute APGAR had slightly more variation than the 5 minute, as `r sum(data$fmaps == 9, na.rm = T)/length(data$fmaps) * 100` percent of the 5 minute APGAR scores were a 9, and only `r sum(data$omaps == 9, na.rm = T)/length(data$omaps) * 100` percent of 1 minute APGAR scores were a score of 9 (also the mode, but scores in this 1 minute APGAR had more of a variation). After researching the meaning of the APGAR scores, we felt it necessary to include these in our measure for baby health, as they are meant to be a quick assessment on how the baby is doing outside the womb.
 Summary of 5-Minute APGAR Scores:
 ```{R}
 summary(data$fmaps)
@@ -98,7 +98,7 @@ data$premonths = 9 - data$monpre
   
 *Number of Months of Prenatal Care:* This variable is calculated from "data\$monpre", which is the month in which prenatal care began by subtracting "data\$monpre" from 9 months. The median length of prenatal care is `r round(median(data$premonths),2)`, and the data displays a heavy negative skew, indicating that most mothers in the sample begin receiving prenatal care early in their pregnancies.  
 
-*Number of Prenatal Visits:* This variable exhibits a wide distribution curve with a sharp spike at 12 visits. Doctors generally recommend a prenatal checkup schedule of one visit per month during the first 6-7 months of pregnancy, followed by more frequent visits in the weeks leading up to delivery. The observed spike is likely the result of a large number of mothers in the sample following this recommendation or a similar schedule.The sample also includes 26 observations with more than 20 prenatal visits, up to a maximum of 40 visits. These outliers could represent difficult pregnancies that required additional medical care, errors in data collection, or both. However, these cases are not excluded from analysis because the large spike in observations at 12 visits limits the effects of these outliers on the sample average. 
+*Number of Prenatal Visits:* This variable exhibits a wide distribution curve with a sharp spike at 12 visits. Doctors generally recommend a prenatal checkup schedule of one visit per month during the first 6-7 months of pregnancy, followed by more frequent visits in the weeks leading up to delivery. The observed spike is likely the result of a large number of mothers in the sample following this recommendation or a similar schedule. The sample also includes 26 observations with more than 20 prenatal visits, up to a maximum of 40 visits. These outliers could represent difficult pregnancies that required additional medical care, errors in data collection, or both. However, these cases are not excluded from analysis because the large spike in observations at 12 visits limits the effects of these outliers on the sample average. 
 
 ```{r}
 layout(matrix(c(1,2), 1, byrow = TRUE))
@@ -130,7 +130,7 @@ hist(log(data$cigs), breaks = 10, ylim = c(0,60), labels = TRUE, main = "Histogr
      xlab = "log of Cigarettes Smoked per Day")
 ```
   
-As shown in the histograms above, the _cigs_ variable displays a heavy positive skew, as relatively few mothers in the sample smoked during their pregancies, resulting in an extremely non-normal distribution. A more normal distribution can be achieved by applying a logarithmic transformation to the data.
+As shown in the histograms above, the _cigs_ variable displays a heavy positive skew, as relatively few mothers in the sample smoked during their pregnancies, resulting in an extremely non-normal distribution. A more normal distribution can be achieved by applying a logarithmic transformation to the data.
 
 ```{r}
 scatterplot(jitter(data$cigs), jitter(data$bwght))
@@ -215,21 +215,21 @@ plot(model1)
 ### Analysis of CLM Assumptions
 
 #### CLM Assumption 1 
-Linear population model - For all three models, We make the weak assumption that there is linearity in the parameters and use the linear regression model.
+Linear population model - For all three models, we make the weak assumption that there is linearity in the parameters and use the linear regression model.
 
 #### CLM Assumption 2 
-Random Sampling - The supplied dataset `bwght\_w203.RData` contains data from the National Center for Health Statistics. The National Center for Health Statistics is the nation’s principal health statistics agency and its data is used for health policy decisions and national research. They cite their sources and birth certificates, patient medical records, personal interviews, lab tests and facility information. The center has adopted high standards for survey design and data collection.  The methodoly is described at `https://www.cdc.gov/nchs/data/factsheets/factsheet_health_statistics.htm` 
+Random Sampling - The supplied dataset `bwght\_w203.RData` contains data from the National Center for Health Statistics. The National Center for Health Statistics is the nation’s principal health statistics agency and its data is used for health policy decisions and national research. They cite their sources and birth certificates, patient medical records, personal interviews, lab tests and facility information. The center has adopted high standards for survey design and data collection.  The methodology is described at `https://www.cdc.gov/nchs/data/factsheets/factsheet_health_statistics.htm` 
 Based on this information, we assume that the subset of data provided for this analysis is a valid random sample.
 
 #### CLM Assumption 3 
-No perfect Collinearity - To verify that this assumuption is valid we reexamine our variables - npvis, cigs and drink.  We create a covariance 
+No perfect Collinearity - To verify that this assumption  is valid we reexamine our variables - npvis, cigs and drink.  We create a covariance 
 ```{R}
 
 M <- data.matrix(subset(data1, select=c("npvis", "cigs", "drink" ))) 
 C1 <- cov(M)
 C1
 ```
-In this matrix shown above, the values along the diagonal are the variances and the other values are the covariances bewteen the variables.  None of the variables are constant (as the variance is greater than zero.  
+In this matrix shown above, the values along the diagonal are the variances and the other values are the covariances between the variables.  None of the variables are constant (as the variance is greater than zero.  
 ```{R}
 cor(M)
 ```
@@ -241,7 +241,7 @@ vif(model1)
 Our low variable inflation factors (VIFs) also indicate there is no perfect multicollinearity in our model.
 
 #### CLM Assumption 4 
-Zero Contitional Mean - For model 1, we examine the Residuals verses Fitted Values plot above.  We note that on the lower and upper extremes there are few data points which may account for slight variation from zero.  Otherwise the data indicate that this assumption holds, as the mean of the residual values are centered at 0. 
+Zero Conditional  Mean - For model 1, we examine the Residuals verses Fitted Values plot above.  We note that on the lower and upper extremes there are few data points which may account for slight variation from zero.  Otherwise the data indicate that this assumption holds, as the mean of the residual values are centered at 0. 
 
 #### CLM Assumption 5 
 Homoskedasticity - To verify this assumption, we again look at our residuals verses fitted plot. As evident in this plot, homoskedasticity cannot be assumed.  There appears to be more variation in the middle of the graph. So, we will run the Breusch-Pagan test.
@@ -279,13 +279,13 @@ plot(model2)
 These assumptions hold as in model 1.
 
 #### CLM Assumption 3 
-No perfect Collinearity - To verify that this assumuption is valid we look at our new set of variables -  cigs, drink, mage, male, educ and fblck.  We create a covariance matrix. 
+No perfect Collinearity - To verify that this assumption  is valid we look at our new set of variables -  cigs, drink, mage, male, educ and fblck.  We create a covariance matrix. 
 ```{R}
 N <- data.matrix(subset(data, select=c("npvis", "cigs", "drink", "mage", "male", "feduc", "fblck" ))) 
 C2 <- cov(N)
 C2
 ```
-In this matrix shown above, the values along the diagonal are the variances and the other values are the covariances bewteen the variables.  None of the variables are constant (as the variance is greater than zero.  
+In this matrix shown above, the values along the diagonal are the variances and the other values are the covariances between the variables.  None of the variables are constant (as the variance is greater than zero.  
 ```{R}
 cor(N)
 ```
@@ -334,13 +334,13 @@ plot(model3)
 These assumptions hold as in model 1.
 
 #### CLM Assumption 3 
-No perfect Collinearity - To verify that this assumuption is valid we look at our new set of variables -  npvis, cigs, drink, mage, male, feduc, fblck,  meduc, mblck and monpre.  We create a covariance matrix. 
+No perfect Collinearity - To verify that this assumption  is valid we look at our new set of variables -  npvis, cigs, drink, mage, male, feduc, fblck,  meduc, mblck and monpre.  We create a covariance matrix. 
 ```{R}
 O<- data.matrix(subset(data, select=c("npvis", "cigs", "drink", "mage", "male", "feduc", "fblck", "meduc", "mblck", "monpre" ))) 
 C3 <- cov(O)
 C3
 ```
-In this matrix shown above, the values along the diagonal are the variances and the other values are the covariances bewteen the variables.  None of the variables are constant (as the variance is greater than zero.)  
+In this matrix shown above, the values along the diagonal are the variances and the other values are the covariances between the variables.  None of the variables are constant (as the variance is greater than zero.)  
 ```{R}
 cor(O)
 ```
