@@ -162,9 +162,12 @@ Examining the heat map for correlations, we see that there appear to be positive
 
 ```{r}
 layout(matrix(c(1,2,3,0), 2, byrow = TRUE))
-hist(data$mage, breaks = seq(-0.5, 44.5,by=1), xlim = c(0,50))
-hist(data$fwhte, breaks = seq(-0.5, 1.5,by=1))
-hist(data$feduc, breaks = seq(-0.5, 18.5, by=1), xlim = c(0,20))
+hist(data$mage, breaks = seq(-0.5, 44.5,by=1), xlim = c(0,50), main = "Histogram of Mother's Age",
+     xlab = "Mother's age in years")
+hist(data$fwhte, breaks = seq(-0.5, 1.5,by=1), main = "Histogram of White Fathers",
+     xlab = "1 = White, 0 = Non-White")
+hist(data$feduc, breaks = seq(-0.5, 18.5, by=1), xlim = c(0,20), main = "Histogram of Father's Education",
+     xlab = "Father's education in years")
 ```
   
 ```{r}
