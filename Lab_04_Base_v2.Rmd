@@ -43,7 +43,7 @@ A successful submission will include
 
 ***
 
-##Baby Health Outcomes
+## Baby Health Outcomes
 
 *Birth Weight:* Observations of birth weight in the sample are almost normally distributed, with a slight negative skew. Mean and median birth weight are both approximately 3.2 kg.
 ```{r}
