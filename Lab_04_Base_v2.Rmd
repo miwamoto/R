@@ -186,9 +186,15 @@ data1 <- data[data$mage > 18 & data$mage < 35,]
 model1 <- lm(bbscore ~ npvis + cigs + drink, data = data1)
 model1
 ```
+
 ```{r}
 coeftest(model1, vcov = vcovHC)
 ```
+
+```{r}
+vif(model1)
+``` 
+
 ```{r}
 layout(matrix(c(1,2,3,4), 2, byrow = TRUE))
 plot(model1)
@@ -199,6 +205,18 @@ plot(model1)
 ```{R}
 model2 <- lm(bbscore ~ npvis + cigs + drink + mage + male + feduc + fblck, data = data)
 model2
+```
+  
+```{r}
+coeftest(model2, vcov = vcovHC)
+```
+  
+```{r}
+vif(model2)
+```  
+  
+```{r}
+layout(matrix(c(1,2,3,4), 2, byrow = TRUE))
 plot(model2)
 ```
 
@@ -208,6 +226,18 @@ plot(model2)
 ```{R}
 model3 <- lm(bbscore ~ npvis + cigs + drink + mage + male + feduc + fblck + meduc + mblck + monpre, data = data)
 model3
+```
+
+```{r}
+coeftest(model3, vcov = vcovHC)
+```
+  
+```{r}
+vif(model3)
+```  
+  
+```{r}
+layout(matrix(c(1,2,3,4), 2, byrow = TRUE))
 plot(model3)
 ```
 
