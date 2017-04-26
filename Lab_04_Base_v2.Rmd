@@ -21,6 +21,8 @@ library(car)
 library(ggplot2)
 library(reshape2)
 library(stargazer)
+library(lmtest)
+library(sandwich)
 load("bwght_w203.RData")
 desc
 ```
@@ -183,6 +185,12 @@ For our initial model, our explanatory variables are `npvis`  - number for prima
 data1 <- data[data$mage > 18 & data$mage < 35,]
 model1 <- lm(bbscore ~ npvis + cigs + drink, data = data1)
 model1
+```
+```{r}
+coeftest(model1, vcov = vcovHC)
+```
+```{r}
+layout(matrix(c(1,2,3,4), 2, byrow = TRUE))
 plot(model1)
 ```
 
