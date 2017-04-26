@@ -1,0 +1,426 @@
+---
+title: "Lab 4: Does Prenatal Care Improve Infant Health?"
+author: "w203 Section 4: Jessica Economou, Kevin Gifford, Mona Iwamoto"
+
+date: "April 27, 2017"
+output: pdf_document
+---
+
+# Introduction
+This study explores the relationship between prenatal health care and health outcomes for newborn infants. Data for the study includes information gathered by the National Center for Health Statistics and birth certificate records. The study explores the available data and applies linear regression modeling to evaluate the relationship between the various variables in the dataset and the key outcome variables, birthweight and APGAR scores.  
+
+```{r}
+library(car)
+library(ggplot2)
+library(reshape2)
+library(stargazer)
+library(lmtest)
+library(sandwich)
+load("bwght_w203.RData")
+desc
+```
+
+# Data Exploration and Model Building Process
+
+In the following analysis, we excluded any mothers under the age of 18 and over the age of 35, as there are widely known health complications within these ages. It's important to note that because of this restriction, our models provided are for babies with mothers over age 18 and under age 35 only. These may vary for mothers outside these age ranges, but executing the models this way mitigated the risk of having mothers in our dataset whose baby scores were more of a factor of their age than the amount of prenatal care they received. We also only included complese cases from the sample, so that unknown variables of bad data would not impact our regression.
+
+```{R}
+data <- data[data$mage > 18 & data$mage < 35,]
+data <- na.exclude(data, complete.cases(data))
+```
+
+## Baby Health Outcomes
+
+*Birth Weight:* Observations of birth weight in the sample are almost normally distributed, with a slight negative skew. Mean and median birth weight are both approximately 3.4 kg. While the lowest birth weight in the sample is very low at 360 grams, a recap of the data indicates that there are six observations with recorded birth weights below 1 kg. Babies born prematurely can exhibit very low birth weights, so we chose not to exclude these records from analysis.  
+
+```{r}
+summary(data$bwght)
+```
+```{r}
+hist(data$bwght, breaks = 20, main = "Histogram of Birth Weight", ylim = c(0,300), 
+     xlab = "Birth weight in grams")
+```
+  
+*APGAR Scores:* APGAR Scores in this dataset were strongly negatively skewed. The one minute APGAR had slightly more variation than the 5 minute, as `r sum(data$fmaps == 9, na.rm = T)/length(data$fmaps) * 100` percent of the 5 minute APGAR scores were a 9, and only `r sum(data$omaps == 9, na.rm = T)/length(data$omaps) * 100` percent of 1 minute APGAR scores were a score of 9 (also the mode, but scores in this 1 minute APGAR had more variation). After researching the meaning of the APGAR scores, we felt it necessary to include these in our measure for baby health, as they are meant to be a quick assessment on how the baby is doing outside the womb.  
+Summary of 5-Minute APGAR Scores:
+```{R}
+summary(data$fmaps)
+```
+  
+Summary of 1-Minute APGAR Scores:  
+```{r}
+summary(data$omaps)
+```
+
+```{R}
+layout(matrix(c(1,2), 1, byrow = TRUE))
+hist(data$omaps, main = "1 Min APGAR Scores Histogram", breaks = seq(-0.5,10.5,by=1),
+     xlab = "1-Minute APGAR Score")
+hist(data$fmaps, main = "5 Min APGAR Scores Histogram", breaks = seq(-0.5,10.5,by=1),
+     xlab = "5-Minute APGAR Score")
+```
+
+*New Variable - Baby Score:* Given the nature of these variables, we defined a new variable that takes both birthweight and APGAR scores into account called `bbscore`, or Baby Score. This was calculated by adding the five minute APGAR score with a weighted one minute APGAR score and then multiplying the result by the birth weight.  We weighted the one-minute score by a factor of 80%, because doing this allowed for the 5-minute measure to hold more weight in the overall score (as the 5-minute APGAR is a better indicator on the baby's actual health, and the one-minute is more of an assessment on how the baby handled the birthing process). We chose not to exclude the 1-minute score altogether because this measure exhibits more variability than the 5-minute score and still provide information on the baby's health at a certain point in time.  
+
+```{R}
+data$bbscore <- ((data$fmaps + (data$omaps*0.8)) * data$bwght)
+```
+In addition to accounting for factors other than birth weight, one advantage of using this new measure of outcome is that this APGAR factor adds variance and spreads out the curve.  Note that the curve resembles a normal distribution.
+
+```{R}
+hist(data$bbscore, breaks = 50, main = "Histogram of Baby Health (bbscore)", xlab = "bbscore",
+     xlim = c(0,100000))
+```
+```{r}
+summary(data$bbscore)
+```
+
+It's important to note that this baby score variable is not a perfect indicator of baby health, but for the reasons outlined above, it is a better measure than simply using birthweight alone. If we had only used birthweight, we would essentially be saying that the heavier the baby, the healtier it is, and this is not always true. Multiplying their birthweight number by APGAR allows compensates for bigger babies who may have a lower health score. 
+  
+## Primary Predictor Variables
+As described above, our modeling process focuses on using APGAR scores and birth weight to measure health outcomes. Reviewing the data available, the two variables most associated with prenatal medical care are the number of prenatal visits (npvis) and the month of the pregnancy in which prenatal care began (monpre). For purposes of modeling, we can create a new variable to measure the number of months of prenatal care received.  
+```{r}
+data$premonths = 9 - data$monpre
+```
+  
+*Number of Months of Prenatal Care:* This variable is calculated from "data\$monpre", which is the month in which prenatal care began by subtracting "data\$monpre" from 9 months. The median length of prenatal care is `r round(median(data$premonths),2)`, and the data displays a heavy negative skew, indicating that most mothers in the sample begin receiving prenatal care early in their pregnancies.  
+
+*Number of Prenatal Visits:* This variable exhibits a wide distribution curve with a sharp spike at 12 visits. Doctors generally recommend a prenatal checkup schedule of one visit per month during the first 6-7 months of pregnancy, followed by more frequent visits in the weeks leading up to delivery. The observed spike is likely the result of a large number of mothers in the sample following this recommendation or a similar schedule. The sample also includes 26 observations with more than 20 prenatal visits, up to a maximum of 40 visits. These outliers could represent difficult pregnancies that required additional medical care, errors in data collection, or both. However, these cases are not excluded from analysis because the large spike in observations at 12 visits limits the effects of these outliers on the sample average. 
+
+```{r}
+layout(matrix(c(1,2), 1, byrow = TRUE))
+hist(data$npvis, breaks = seq(-0.5, 40.5,by=1), main = "Histogram of Prenatal Visits",
+     xlab = "Total number of prenatal visits", ylim = c(0,500))
+hist(data$premonths, breaks = seq(-0.5,9.5,by=1), xlim = c(0,10), 
+     main = "Histogram of Months of Care", xlab = "Months of prenatal care received")
+```
+  
+```{r}
+scatterplot(jitter(data$premonths), jitter(data$npvis))
+```
+```{r}
+cor(data$premonths, data$npvis, use = "complete.obs")
+```
+Based on the plot and calculations above, there appears to be a moderate positive correlation between the number of months of prenatal care received and the number of prenatal visits. This is quite natural; expectant mothers who begin care early have more time to visit the doctor before they give birth. The two variables have a moderate correlation, so including them both as predictor variables in the same model would not strictly violate the assumption regarding perfect multicollinearity, but doing so would increase the bias of the model because some number prenatal visits could potentially be explained by duration of care.  
+
+We did notice that there were two cases where the mother started getting prenatal care very late (in the last month of her pregnancy), yet visited the doctor 30 times. We thought this was strange, so we analyzed these two data points closer to see if we could find anything else regarding these two data points that would require them to be removed:
+
+```{r}
+data[!is.na(data$npvis) & data$npvis >=30 & data$premonths == 1,]
+```
+These don't appear to be "bad" data points, judging by the rest of the data, or to have much of an impact on our models, so we made the decision to leave them in.
+
+*Smoking and Alcohol Consumption:* Doctors also commonly recommend that mothers avoid smoking and drinking during their pregnancy as a standard prenatal health practice. For this reason, we decided to analyze these two variables individually as well.
+```{r}
+layout(matrix(c(1,2), 1, byrow = TRUE))
+hist(data$cigs, breaks = 10, labels = TRUE, ylim = c(0,2000), main = "Histogram of Cigarettes",
+     xlab = "Cigarettes Smoked per Day")
+hist(log(data$cigs), breaks = 10, ylim = c(0,60), labels = TRUE, main = "Histogram of Log of Cigarettes",
+     xlab = "log of Cigarettes Smoked per Day")
+```
+  
+As shown in the histograms above, the _cigs_ variable displays a heavy positive skew, as relatively few mothers in the sample smoked during their pregnancies, resulting in an extremely non-normal distribution. A more normal distribution can be achieved by applying a logarithmic transformation to the data.
+
+```{r}
+scatterplot(jitter(data$cigs), jitter(data$bwght))
+```
+
+```{r}
+cor(data$cigs, data$bwght, use = "complete.obs")
+```
+As shown above, the number of cigarettes smoked per day displays a negative correlation with birth weight. While the correlation is relatively weak, this may indicate a relationship worth exploring further in our model.    
+
+```{r}
+hist(data$drink, breaks = seq(-0.5,8.5,by=1), ylim = c(0,2000), labels = TRUE, 
+     main = "Histogram of Drinks per Week", xlab = "Alcoholic Drinks per Week")
+```
+```{r}
+scatterplot(jitter(data$drink), jitter(data$bwght))
+```
+```{r}
+cor(data$drink, data$bwght, use = "complete.obs")
+```
+Likewise, the number of alcoholic drinks per week also displays a negative correlation with birth weight. While the correlation appears quite weak, this could potentially be an artifact of sampling; because doctors typically recommend that mothers avoid alcohol consumption during pregnancy, the sample contains relatively few observations of mothers who drank. Due to both the observed correlation and the importance placed upon this factor by the medical establishment, we believe this relationship is worth exploring further in our model.  
+  
+## Additional Predictor Variables
+To identify additional potential predictor variables, we can examine a correlation heat map.  
+
+```{r}
+qplot(x=Var1, y=Var2, data=melt(cor(data, use="p")), fill=value, geom="tile") +
+   scale_fill_gradient2(limits=c(-1, 1))
+```
+  
+Examining the heat map above, we can see that the sample dataset contains relatively few variables with strong correlations to our variables of interest (APGAR scores and birth weight) or to our composite Baby Score variable. Most of the strong correlations shown on the map are between other variables, such as the race of the parents. For example, the correlation between black fathers and black mothers is `r round(cor(data$fblck, data$mblck, use = "complete.obs"), 4)`, and the correlation between the father's age and the mother's age is `r round(cor(data$fage, data$mage, use = "complete.obs"), 4)`. There do appear to be positive correlations between birthweight and the age of the mother (mage), white fathers (fwhte), and the father’s education (feduc); though they are relatively weak (all three are less than 0.1), these are the most correlated variables to birth weight (outside composite variables directly related to birth weight, such as the low birth weight and very low birth weight indicators). As a result, we chose to further investigate these variables for inclusion in our modeling process.  
+
+
+```{r}
+layout(matrix(c(1,2,3,0), 2, byrow = TRUE))
+hist(data$mage, breaks = seq(-0.5, 44.5,by=1), xlim = c(0,50), main = "Histogram of Mother's Age",
+     xlab = "Mother's age in years")
+hist(data$fwhte, breaks = seq(-0.5, 1.5,by=1), main = "Histogram of White Fathers",
+     xlab = "1 = White, 0 = Non-White")
+hist(data$feduc, breaks = seq(-0.5, 18.5, by=1), xlim = c(0,20), main = "Histogram of Father's Education",
+     xlab = "Father's education in years")
+```
+  
+```{r}
+scatterplot(jitter(data$mage), jitter(data$bbscore))
+scatterplot(jitter(data$fwhte), jitter(data$bbscore))
+scatterplot(jitter(data$feduc), jitter(data$bbscore))
+```
+ 
+```{r}
+cor(data$mage, data$bbscore)
+cor(data$fwhte, data$bbscore)
+cor(data$feduc, data$bbscore)
+```
+  
+
+# Modeling Healthy Outcomes
+
+## Model 1
+
+For our initial model, our explanatory variables are `npvis`  - number for primary care visits, `cigs`  - number of cigarettes smoked per day and `drink` - average number of drinks per week, as these are the primary indicators. As discussed earlier, we only included the number of visits in our model instead of also adding in the number of months of care they received because these two variables were too correlated, and would increase bias in our model. 
+
+```{R}
+model1 <- lm(bbscore ~ npvis + cigs + drink, data = data)
+model1
+```
+
+
+```{r}
+layout(matrix(c(1,2,3,4), 2, byrow = TRUE))
+plot(model1)
+```
+Before making any assumptions and interpretting the results of our model and performing a coefficient test, we must analyze the CLM assumptions of this model.
+
+### Analysis of CLM Assumptions
+
+#### CLM Assumption 1 
+Linear population model - For all three models, we make the weak assumption that there is linearity in the parameters and use the linear regression model.
+
+#### CLM Assumption 2 
+Random Sampling - The supplied dataset `bwght\_w203.RData` contains data from the National Center for Health Statistics. The National Center for Health Statistics is the nation’s principal health statistics agency and its data is used for health policy decisions and national research. They cite their sources and birth certificates, patient medical records, personal interviews, lab tests and facility information. The center has adopted high standards for survey design and data collection.  The methodology is described at `https://www.cdc.gov/nchs/data/factsheets/factsheet_health_statistics.htm` 
+Based on this information, we assume that the subset of data provided for this analysis is a valid random sample.
+
+#### CLM Assumption 3 
+No perfect collinearity - To verify that this assumption is valid, we reexamine our variables - npvis, cigs and drink - and create a covariance matrix.  
+```{R}
+M <- data.matrix(subset(data, select=c("npvis", "cigs", "drink" ))) 
+C1 <- cov(M)
+C1
+```
+In this matrix shown above, the values along the diagonal are the variances and the other values are the covariances between the variables.  None of the variables are constant, as the variance is greater than zero. 
+```{R}
+cor(M)
+```
+Looking at the correlation matrix above we can verify that none of our variables have an exact linear relationship, or in other words that none of the variables perfectly explain baby score.
+
+```{r}
+vif(model1)
+``` 
+Our low variable inflation factors (VIFs) also indicate there is no perfect multicollinearity in our model. The VIF is a measure for testing how much the variance of the estimated coefficients in our model are inflated compared to when the predictor variables are not correlated. This is well under 10, so we'll continue our analysis as this is not a cause for concern.
+
+#### CLM Assumption 4 
+Zero Conditional  Mean - For model 1, we examine the Residuals verses Fitted Values plot above.  We note that on the lower and upper extremes there are few data points which may account for slight variation from zero.  Otherwise the data indicates that this assumption holds, as the mean of the residual values are centered at 0. 
+
+#### CLM Assumption 5 
+Homoskedasticity - To verify this assumption, we again look at our residuals verses fitted plot. As evident in this plot, homoskedasticity cannot be assumed.  There appears to be more variation in the middle of the graph. So, we will run the Breusch-Pagan test.
+```{R}
+bptest(model1)
+```
+Interestingly, even with a large sample size that would make this more sensitive to being concluded as a heteroskedastic model, the p-value of 0.1076 means that we cannot reject the null hypothesis that this is a homoskedastic model. We can pass this assumption as homoskedastic without having to use robust standard errors.
+
+#### CLM Assumption 6
+Normality - Here, we want to show that the population error is independent of our explanatory variables and normally distributed.
+```{R}
+hist(model1$residuals, main = "Histogram of Residuals", breaks = 20, xlab = "Model 1 Residuals",
+     xlim = c(-60000,40000))
+```
+  
+Based on the histogram above, we see that the distribution of residuals resembles a normal distribution.  
+
+*Analysis of Results*:
+
+```{r}
+coeftest(model1)
+```
+
+The number of visits and number of cigarrettes both have statistically significant results for their coefficients as shown by the low p-values above. The number of visits can be interpreted as: for every additional visit the mother makes, holding the number of cigarrettes and drinks consumed constant, mothers typically see an increase of 285.83 to their baby score. This intepretation is interchangeable with each variable, meaning the fewer cigs the mother consumed on average, the better their baby score turned out (which intuitively makes sense).  
+
+To determine how practically significant this effect is, we went back to the originally distribution of baby scores. A score of +285.83 does seem like a large number, but we'd have to compare this to the range of baby scores to see how much this truly is.
+
+```{r}
+summary(data$bbscore)
+```
+
+There is a huge spread in these scores. Say the baby had a mean score of 53,830. If we added 285.83 to this number, the % increase in score would only be `r (285.832/mean(data$bbscore)) * 100` percent increase. This is still a measurable increase, but it doesn't sound like as big of an increase as the score in terms of units.
+
+## Model 2  
+
+In the second model, we added in more variables: mother age, father education, whether or not the baby was male, and whether or not the father was black. These are not necesarily indicators of prenatal care, but we hypothesized that adding additional variables would increase the accuracy of our model for predicting baby score. In or correlation analysis above during our exploratory data analysis, we found that feduc and fblck were the most highly correlated with baby scores of all the race and education variables. We only included one factor for race and education, as correlations between mother education and father education as well as mother race with father race would introduce increased bias to our model.
+
+```{R}
+model2 <- lm(bbscore ~ npvis + cigs + drink + mage + male + feduc + fblck, data = data) 
+model2
+```
+  
+  
+```{r}
+layout(matrix(c(1,2,3,4), 2, byrow = TRUE))
+plot(model2)
+```
+### Analysis of CLM Assumptions
+
+#### CLM Assumption 1 and 2
+These assumptions hold as in Model 1.
+
+#### CLM Assumption 3 
+No perfect Collinearity - To verify that this assumption  is valid we look at our new set of variables -  cigs, drink, mage, male, educ and fblck - and create a covariance matrix. 
+```{R}
+N <- data.matrix(subset(data, select=c("npvis", "cigs", "drink", "mage", "male", "feduc", "fblck" ))) 
+C2 <- cov(N)
+C2
+```
+  
+In this matrix shown above, the values along the diagonal are the variances and the other values are the covariances between the variables.  None of the variables are constant, as the variance is greater than zero.  
+```{R}
+cor(N)
+```
+  
+Looking at the correlation matrix above, we can verify that none of our variables have an exact linear relationship. 
+
+```{r}
+vif(model2)
+```  
+Our low variable inflation factors (VIFs) also indicate there is no perfect multicollinearity in our model.
+
+#### CLM Assumption 4 
+Zero Conditional Mean - For Model 2, we examine the Residuals verses Fitted Values plot above.  We note that the values are centered around zero as indicated by the fitted line.  Thus, this assumption holds.
+
+#### CLM Assumption 5 
+Homoskedasticity - To verify this assumption, we again look at our residuals verses fitted plot.  In this plot,  there appears to be a nearly even thickness across the x axis. So, we will run the Breusch-Pagan test to verify homoskedasticity.  
+```{R}
+bptest(model2)
+```
+  
+With a high p-value of 0.201, we cannot reject the null hypothesis. As it did with model 1, this assumption holds, and there is no need for robust standard errors.  
+
+#### CLM Assumption 6
+Normality - As with our original model, we want to show that the population error is independent of our explanatory variables and normally distributed.
+```{R}
+hist(model2$residuals, main = "Histogram of Residuals", breaks = 20, xlab = "Model 2 Residuals",
+     xlim = c(-60000,40000))
+```
+We see that the distribution resembles a normal distribution.  There is a slight negative skew, but this is nothing to worry about given the large sample size.
+
+*Analysis of Results*: 
+
+```{r}
+coeftest(model2)
+```
+Once again, the number of visits produced a significant coefficient. Holding all of these independent variables constant, the number of visits did actually go down slightly from the previous model (from + 285 to +275), likely because of adding in other variables that were causing further bias to it when these variables were omitted in model 1. These coefficients can be interpreted the same way as they were in model 1, with the exception of the indicator variables. The male coeficient (whether or not the baby was male) now has to be interpreted as: males on average received a higher baby score than females by 1,441 baby score points, holding all other variables constant. This does have a high rate of variability (standard error of 531), so this specific number may not be too accurate when looking at the true population model.
+
+The standard errors produced be the mother's education (feduc) and the father being black or not (fblck) were extremely high, meaning they don't hold much weight and contain lots of variability in our model. The also do not have significant p-values. This is due to the unbalanced distributions of their variables, discussed in our correlation analysis earlier.
+
+## Model 3  
+
+For model 3, we built off of model 2, but added in variables we knew were correlated, hoping that although we were increasing variability because of the increased correlation in independent variables, we'd also see a more accurate model with an increased number of variables being accounted for. The variables we added were monpre (correlated with number of visits), meduc (shown to be correlated with father education), and mblck (correlated with fblck). 
+
+```{R}
+model3 <- lm(bbscore ~ npvis + cigs + drink + mage + male + feduc + fblck + meduc + mblck + monpre, data = data)
+model3
+```
+  
+```{r}
+layout(matrix(c(1,2,3,4), 2, byrow = TRUE))
+plot(model3)
+```
+### Analysis of CLM Assumptions
+
+#### CLM Assumption 1 and 2
+These assumptions hold as in model 1.
+
+#### CLM Assumption 3 
+No perfect Collinearity - To verify that this assumption  is valid we look at our new set of variables -  npvis, cigs, drink, mage, male, feduc, fblck,  meduc, mblck and monpre - and create a covariance matrix. 
+```{R}
+O<- data.matrix(subset(data, select=c("npvis", "cigs", "drink", "mage", "male", "feduc", "fblck", "meduc", "mblck", "monpre" ))) 
+C3 <- cov(O)
+C3
+```
+  
+In this matrix shown above, the values along the diagonal are the variances and the other values are the covariances between the variables.  None of the variables are constant, as the variance is greater than zero.  
+```{R}
+cor(O)
+```
+Looking at the correlation matrix above we can verify that none of our variables have an exact linear relationship. 
+
+```{r}
+vif(model3)
+```  
+Examining our variable inflation factors we see evidence  of multicollinearity in our model. In particular, the variables fblck and mblck have high VIFs.  This may be due to a relationship between these two variables and suggests that the incidence of parents being of the same race is not random. Also, looking back at the correlation heat map generated as part of our exploratory data analysis, we can see that correlation exists between variables feduc and meduc, as well as fblck and mblck. Based on this, this inclusion of these additional variables may have introduced bias into Model 3.
+
+#### CLM Assumption 4
+Zero Conditional Mean - Similar to models 1 and 2.  This assumption holds.
+
+#### CLM Assumption 5 
+Homoskedasticity - To verify this assumption, we again look at our residuals verses fitted plot.  In this plot, we see evidence of heteroskedasticity. So, we will run the Breusch-Pagan test.
+```{R}
+bptest(model3)
+```
+Similar to what we saw in the other models, we can assume homoskedasticity
+
+#### CLM Assumption 6
+Normality - As with our original model, we want to show that the population error is independent of our explanatory variables and normally distributed.
+```{R}
+hist(model3$residuals, main = "Histogram of Residuals", breaks = 20, xlab = "Model 3 Residuals",
+     xlim = c(-60000,40000))
+```
+```{r}
+coeftest(model3)
+```
+*Analysis of Model:* 
+One needs to be very careful in interpreting the above coeficient test, as the added variability of correlated variables could be skewing the results. This model is an attempt to hold lots of factors constant, but in reality due to the correlation between some intependent variables, it's not truly able to hold them constant.
+~~~
+After the CLM analysis revealed a violation of the Gauss-Markov assumption 3, we remove one of the collinear variables, fblck, from the model and recheck the VIFs. We kept monpre in, as the VIF was surprisingly low.
+
+```{R}
+model4 <- lm(bbscore ~ npvis + cigs + drink + mage + male + feduc + meduc + mblck + monpre, data = data)
+model4
+vif(model4)
+```
+This model reduced collinearity of the variables. The new variable inflation factors are now all in the low range.  
+
+##Summary of Modeling Results
+
+We created the following regression table to compare our model results to each other:
+
+```{R}
+stargazer(model1, model2, model3, model4, type = "text", omit.stat = "f",
+          star.cutoffs = c(0.05, 0.01, 0.001))
+```
+
+```{R}
+AIC(model1, model2, model3, model4)
+```
+*Discussion on Causality:* This is not a true experiment with randomly assigned variables and controls, so many purists would consider this unable to be interpreted causally just for that reason. Regression analyses are more about giving insight into associations between variables, and readers must be very careful about automatically assuming effects are causal. Aside from these two points, we also have reason to believe that there are enough omitted variables in this dataset that are contributing to a heavy increase in bias, meaning none of our model results should be interpreted causally. 
+
+It's important to remember that we're not working within the true population model, and that these are just sample models. By not including some of the variables that are likely to be a part of the true population model, we're introducing bias into our error term, which is either artificially lowering or increasing values of the coefficients in our sample (when in the true population model, the coefficients wouldn't have these values). 
+
+In this dataset, we were not given any kind of data about the number of prenatal supplements the mother took, which most studies show is beneficial for the baby's health. Because this was not included when it should have been in analyzing the impact of prenatal care, we analyzed how not having this impacted our model 1 results to the "number of visits" coefficient. Our population model should have looked something like this instead of what we originally had for model 1:
+
+Population Model Baby Scores = intercept + npvis + cigs + drink + *number of prenatal vitamins* + error
+
+To try to find the direction of the bias, we set up a mock regression of what this should look like:
+
+Number of prenatal vitamins = intercept + npvis + error
+
+We would expect that the number of prenatal vitamins the mother took would increase as the mother went to the prenatal care, as this is an indicator of mother being proactive towards their baby's health, and that prenatal care alone would also increase the baby score. Since these attributes are both positive, we would expect the regression coefficient for npvis to be driven upwards by omitted variable bias. This is a sign that this coefficient for number of visits is not as conservative as it should be, causing the model to have bias.
+
+Other variables that are not in the model that should have been considered when collecting data for the sample for prenatal care were timing of visits by trimester, checking on pre-existing conditions or illnesses the mother may have had, whether or not the mother did pregnancy yoga or exercised regularly, and stress levels. 
+
+We also have to be careful about the directions of these results (the dependent variable causing independent variables to be a certain way). It's entirely possible that there were mothers who knew they would have unhealthy babies, and the cause of their increase in prenatal care visits had to do with this. 
+
+In summary, the ceteris paribus assumption is key here, as it holds all of the variables we included in the model (other than the error term) constant, but NOT the error term. But if there's another factor in our error term that is correlated with one of our variables, this increases our risk of producing an inaccurate model that cannot be interpreted causally. 
+
+#Conclusion
