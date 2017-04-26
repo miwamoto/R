@@ -349,12 +349,19 @@ Normality - As with our original model, we want to show that the population erro
 hist(model2$residuals, main = "Histogram of Residuals", breaks = 20, xlab = "Model 2 Residuals",
      xlim = c(-60000,40000))
 ```
-
+## Model 4 
+After the CLM analysis revealed a violation of the Gauss-Markov assumption 3, we remove one of the collinear variables, fblck, from the model and recheck the VIFs.
+```{R}
+model4 <- lm(bbscore ~ npvis + cigs + drink + mage + male + feduc + meduc + mblck + monpre, data = data)
+model4
+vif(model4)
+```
+This model reduced collinearity of the variables. The new variable inflation factors are now all in the low range.  
 
 ##Summary of Modeling Results   
 
 ```{R}
-stargazer(model1, model2, model3, type = "text", omit.stat = "f",
+stargazer(model1, model2, model3, model4, type = "text", omit.stat = "f",
           star.cutoffs = c(0.05, 0.01, 0.001))
 ```
 
