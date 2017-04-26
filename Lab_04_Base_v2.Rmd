@@ -80,7 +80,7 @@ summary(data$bbscore)
 
 
 
-##Primary Predictor Variables
+## Primary Predictor Variables
 As described above, our modeling process focuses on using APGAR scores and birth weight to measure health outcomes. Reviewing the data available, the two variables most associated with prenatal medical care are the number of prenatal visits (npvis) and the month of the pregnancy in which prenatal care began (monpre). For purposes of modeling, we can create a new variable to measure the number of months of prenatal care received.  
 ```{r}
 data$premonths = 9 - data$monpre
@@ -140,7 +140,7 @@ cor(data$drink, data$bwght, use = "complete.obs")
 ```
   
   
-##Additional Predictor Variables##  
+## Additional Predictor Variables
 To identify additional potential predictor variables, we can examine a correlation heat map.  
 
 ```{r}
