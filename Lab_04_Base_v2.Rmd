@@ -47,17 +47,23 @@ A successful submission will include
 
 ## Baby Health Outcomes
 
-*Birth Weight:* Observations of birth weight in the sample are almost normally distributed, with a slight negative skew. Mean and median birth weight are both approximately 3.2 kg.
+*Birth Weight:* Observations of birth weight in the sample are almost normally distributed, with a slight negative skew. Mean and median birth weight are both approximately 3.4 kg. While the lowest birth weight in the sample is very low at 360 grams, review of the data indicates that there are six observations with recorded birth weights below 1 kg. Babies born prematurely can exhibit very low birth weights, so we chose not to exclude these records from analysis.  
 ```{r}
 summary(data$bwght)
 ```
 ```{r}
-hist(data$bwght, breaks = 20)
+hist(data$bwght, breaks = 20, main = "Histogram of Birth Weight", ylim = c(0,300), 
+     xlab = "Birth weight in grams")
 ```
   
 *APGAR Scores:* APGAR Scores in this dataset were strongly negatively skewed. The one minute APGAR had slighly more variation than the 5 minute, as `r sum(data$fmaps == 9, na.rm = T)/length(data$fmaps) * 100` percent of the 5 minute APGAR scores were a 9, and only `r sum(data$omaps == 9, na.rm = T)/length(data$omaps) * 100` percent of 1 minute APGAR scores were a score of 9 (also the mode, but scores in this 1 minute APGAR had more of a variation). After researching the meaning of the APGAR scores, we felt it necessary to include these in our measure for baby health, as they are meant to be a quick assessment on how the baby is doing outside the womb.
+Summary of 5-Minute APGAR Scores:
 ```{R}
 summary(data$fmaps)
+```
+  
+Summary of 1-Minute APGAR Scores:  
+```{r}
 summary(data$omaps)
 ```
 
@@ -76,11 +82,10 @@ In addition to accounting for factors other than birth weight, one advantage of 
 
 ```{R}
 hist(data$bbscore, breaks = 50, main = "Histogram of Baby Health (bbscore)", xlab = "bbscore")
+```
+```{r}
 summary(data$bbscore)
 ```
-
-
-
 
 ## Primary Predictor Variables
 As described above, our modeling process focuses on using APGAR scores and birth weight to measure health outcomes. Reviewing the data available, the two variables most associated with prenatal medical care are the number of prenatal visits (npvis) and the month of the pregnancy in which prenatal care began (monpre). For purposes of modeling, we can create a new variable to measure the number of months of prenatal care received.  
@@ -88,7 +93,7 @@ As described above, our modeling process focuses on using APGAR scores and birth
 data$premonths = 9 - data$monpre
 ```
   
-*Number of Months of Prenatal Care:* This variable is calculated from "data\$monpre", which is the month in which prenatal care began by subtracting "data\$monpre" from 9 months. The median length of prenatal care is `r round(median(data$premonths),2)`, and the data displays a heavy negative skew.  
+*Number of Months of Prenatal Care:* This variable is calculated from "data\$monpre", which is the month in which prenatal care began by subtracting "data\$monpre" from 9 months. The median length of prenatal care is `r round(median(data$premonths),2)`, and the data displays a heavy negative skew, indicating that most mothers in the sample begin receiving prenatal care early in their pregnancies.  
 
 *Number of Prenatal Visits:* This variable exhibits a wide distribution curve with a sharp spike at 12 visits. Doctors generally recommend a prenatal checkup schedule of one visit per month during the first 6-7 months of pregnancy, followed by more frequent visits in the weeks leading up to delivery. The observed spike is likely the result of a large number of mothers in the sample following this recommendation or a similar schedule.The sample also includes 26 observations with more than 20 prenatal visits, up to a maximum of 40 visits. These outliers could represent difficult pregnancies that required additional medical care, errors in data collection, or both. However, these cases are not excluded from analysis because the large spike in observations at 12 visits limits the effects of these outliers on the sample average. 
 
@@ -106,18 +111,20 @@ cor(data$premonths, data$npvis, use = "complete.obs")
 ```
 Based on the plot and calculations above, there appears to be a moderate positive correlation between the number of months of prenatal care received and the number of prenatal visits. This is quite natural; expectant mothers who begin care early have more time to visit the doctor before they give birth. The two variables have a moderate correlation, so including them both as predictor variables in the same model would not strictly violate the assumption regarding perfect multicollinearity, but doing so would increase the bias of the model because some number prenatal visits could potentially be explained by duration of care.  
 
-We did noticed that there were two cases where the mother started getting prenatal care very late (in the last month of their pregnancy), yet visited the doctor 30 times. We thought this was strange, so we analyzed these two data points closer to see if we found anything else strange about these two data points that would require them to be removed:
+We did notice that there were two cases where the mother started getting prenatal care very late (in the last month of her pregnancy), yet visited the doctor 30 times. We thought this was strange, so we analyzed these two data points closer to see if we found anything else strange about these two data points that would require them to be removed:
 
 ```{r}
 data[!is.na(data$npvis) & data$npvis >=30 & data$premonths == 1,]
 ```
-These don't appear to be "bad data" points judging by the rest of the data, so we made the decision to leave them in, yet be weary of their impact as possible outliers.
+These don't appear to be "bad data" points judging by the rest of the data, so we made the decision to leave them in, yet be wary of their impact as possible outliers.
 
 Doctors also commonly recommend that mothers avoid smoking and drinking during their pregnancy as a standard prenatal health practice. For this reason, we decided to analyze these two variables individually as well.
 ```{r}
 layout(matrix(c(1,2), 1, byrow = TRUE))
-hist(data$cigs, breaks = 10, labels = TRUE)
-hist(log(data$cigs), breaks = 10, ylim = c(0,60), labels = TRUE)
+hist(data$cigs, breaks = 10, labels = TRUE, ylim = c(0,2000), main = "Histogram of Cigarettes",
+     xlab = "Cigarettes Smoked per Day")
+hist(log(data$cigs), breaks = 10, ylim = c(0,60), labels = TRUE, main = "Histogram of Log of Cigarettes",
+     xlab = "log of Cigarettes Smoked per Day")
 ```
   
 As shown in the histograms above, the _cigs_ variable displays a heavy positive skew, as relatively few mothers in the sample smoked during their pregancies, resulting in an extremely non-normal distribution. A more normal distribution can be achieved by applying a logarithmic transformation to the data.
@@ -132,7 +139,8 @@ cor(data$cigs, data$bwght, use = "complete.obs")
 As shown above, the number of cigarettes smoked per day displays a weak negative correlation with birth weight.  
 
 ```{r}
-hist(data$drink, breaks = seq(-0.5,8.5,by=1), ylim = c(0,2000), labels = TRUE)
+hist(data$drink, breaks = seq(-0.5,8.5,by=1), ylim = c(0,2000), labels = TRUE, 
+     main = "Histogram of Drinks per Week", xlab = "Alcoholic Drinks per Week")
 ```
 ```{r}
 scatterplot(jitter(data$drink), jitter(data$bwght))
