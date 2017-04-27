@@ -69,8 +69,8 @@ data$bbscore <- ((data$fmaps + (data$omaps*0.8)) * data$bwght)
 In addition to accounting for factors other than birth weight, one advantage of using this new measure of outcome is that this APGAR factor adds variance and spreads out the curve.  Note that the curve resembles a normal distribution.
 
 ```{R}
-hist(data$bbscore, breaks = 50, main = "Histogram of Baby Health (bbscore)", xlab = "bbscore",
-     xlim = c(0,100000))
+hist(data$bbscore, breaks = 50, main = "Histogram of Baby Health (bbscore)", 
+     xlab = "bbscore", xlim = c(0,100000))
 ```
 ```{r}
 summary(data$bbscore)
@@ -119,7 +119,7 @@ hist(log(data$cigs), breaks = 10, ylim = c(0,60), labels = TRUE, main = "Histogr
      xlab = "log of Cigarettes Smoked per Day")
 ```
   
-As shown in the histograms above, the _cigs_ variable displays a heavy positive skew, as relatively few mothers in the sample smoked during their pregnancies, resulting in an extremely non-normal distribution. A more normal distribution can be achieved by applying a logarithmic transformation to the data.
+As shown in the histograms above, the `cigs` variable displays a heavy positive skew, as relatively few mothers in the sample smoked during their pregnancies, resulting in an extremely non-normal distribution. A more normal distribution can be achieved by applying a logarithmic transformation to the data.
 
 ```{r}
 scatterplot(jitter(data$cigs), jitter(data$bwght))
@@ -146,11 +146,20 @@ Likewise, the number of alcoholic drinks per week also displays a negative corre
 To identify additional potential predictor variables, we can examine a correlation heat map.  
 
 ```{r}
-qplot(x=Var1, y=Var2, data=melt(cor(data, use="p")), fill=value, geom="tile") +
+q = qplot(x=Var1, y=Var2, data=melt(cor(data, use="p")), fill=value, geom="tile") +
    scale_fill_gradient2(limits=c(-1, 1))
+q + theme(axis.text.x = element_text(angle = -90))
 ```
   
-Examining the heat map above, we can see that the sample dataset contains relatively few variables with strong correlations to our variables of interest (APGAR scores and birth weight) or to our composite Baby Score variable. Most of the strong correlations shown on the map are between other variables, such as the race of the parents. For example, the correlation between black fathers and black mothers is `r round(cor(data$fblck, data$mblck, use = "complete.obs"), 4)`, and the correlation between the father's age and the mother's age is `r round(cor(data$fage, data$mage, use = "complete.obs"), 4)`. There do appear to be positive correlations between birthweight and the age of the mother (mage), white fathers (fwhte), and the father’s education (feduc); though they are relatively weak (all three are less than 0.1), these are the most correlated variables to birth weight (outside composite variables directly related to birth weight, such as the low birth weight and very low birth weight indicators). As a result, we chose to further investigate these variables for inclusion in our modeling process.  
+Examining the heat map above, we can see that the sample dataset contains relatively few variables with strong correlations to our variables of interest (APGAR scores and birth weight) or to our composite Baby Score variable. Most of the strong correlations shown on the map are between other variables, such as the race of the parents. For example, the correlation between black fathers and black mothers is `r round(cor(data$fblck, data$mblck, use = "complete.obs"), 4)`, and the correlation between the father's age and the mother's age is `r round(cor(data$fage, data$mage, use = "complete.obs"), 4)`. There do appear to be positive correlations between birthweight and the age of the mother (`mage`), white fathers (`fwhte`), and the father’s education (`feduc`); though they are relatively weak (all three are less than 0.1), these are the most correlated variables to birth weight (outside composite variables directly related to birth weight, such as the low birth weight and very low birth weight indicators). As a result, we chose to further investigate these variables for inclusion in our modeling process. Correlations to `bbscore`, histograms, and scatterplots for each variable are presented below.    
+
+```{r}
+Cor_mage_vs_bbscore <- cor(data$mage, data$bbscore)
+Cor_fwhte_vs_bbscore <- cor(data$fwhte, data$bbscore)
+Cor_feduc_vs_bbscore <- cor(data$feduc, data$bbscore)
+
+data.frame(Cor_mage_vs_bbscore, Cor_fwhte_vs_bbscore, Cor_feduc_vs_bbscore)
+```
 
 
 ```{r}
@@ -169,12 +178,6 @@ scatterplot(jitter(data$fwhte), jitter(data$bbscore))
 scatterplot(jitter(data$feduc), jitter(data$bbscore))
 ```
  
-```{r}
-cor(data$mage, data$bbscore)
-cor(data$fwhte, data$bbscore)
-cor(data$feduc, data$bbscore)
-```
-  
 
 # Modeling Healthy Outcomes
 
@@ -186,8 +189,7 @@ For our initial model, our explanatory variables are `npvis`  - number for prima
 model1 <- lm(bbscore ~ npvis + cigs + drink, data = data)
 model1
 ```
-
-
+  
 ```{r}
 layout(matrix(c(1,2,3,4), 2, byrow = TRUE))
 plot(model1)
