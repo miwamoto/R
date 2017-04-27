@@ -202,11 +202,13 @@ Before making any assumptions and interpretting the results of our model and per
 Linear population model - For all three models, we make the weak assumption that there is linearity in the parameters and use the linear regression model.
 
 #### CLM Assumption 2 
-Random Sampling - The supplied dataset `bwght\_w203.RData` contains data from the National Center for Health Statistics. The National Center for Health Statistics is the nation’s principal health statistics agency and its data is used for health policy decisions and national research. They cite their sources and birth certificates, patient medical records, personal interviews, lab tests and facility information. The center has adopted high standards for survey design and data collection.  The methodology is described at `https://www.cdc.gov/nchs/data/factsheets/factsheet_health_statistics.htm` 
+Random Sampling - The supplied dataset `bwght\_w203.RData` contains data from the National Center for Health Statistics. The National Center for Health Statistics is the nation’s principal health statistics agency, and its data is used for health policy decisions and national research. They cite their sources and birth certificates, patient medical records, personal interviews, lab tests and facility information. The center has adopted high standards for survey design and data collection.  The methodology is described at `https://www.cdc.gov/nchs/data/factsheets/factsheet_health_statistics.htm` 
 Based on this information, we assume that the subset of data provided for this analysis is a valid random sample.
 
+\pagebreak  
+
 #### CLM Assumption 3 
-No perfect collinearity - To verify that this assumption is valid, we reexamine our variables - npvis, cigs and drink - and create a covariance matrix.  
+No perfect collinearity - To verify that this assumption is valid, we reexamine our variables - `npvis`, `cigs` and `drink` - and create a covariance matrix.  
 ```{R}
 M <- data.matrix(subset(data, select=c("npvis", "cigs", "drink" ))) 
 C1 <- cov(M)
@@ -242,13 +244,13 @@ hist(model1$residuals, main = "Histogram of Residuals", breaks = 20, xlab = "Mod
   
 Based on the histogram above, we see that the distribution of residuals resembles a normal distribution.  
 
-*Analysis of Results*:
+###Analysis of Results
 
 ```{r}
 coeftest(model1)
 ```
 
-The number of visits and number of cigarrettes both have statistically significant results for their coefficients as shown by the low p-values above. The number of visits can be interpreted as: for every additional visit the mother makes, holding the number of cigarrettes and drinks consumed constant, mothers typically see an increase of 285.83 to their baby score. This intepretation is interchangeable with each variable, meaning the fewer cigs the mother consumed on average, the better their baby score turned out (which intuitively makes sense).  
+The number of visits and number of cigarrettes both have statistically significant results for their coefficients as shown by the low p-values above. The number of visits can be interpreted as: for every additional visit the mother makes, holding the number of cigarrettes and drinks consumed constant, mothers typically see an increase of 285.83 to their baby score. This intepretation is interchangeable with each variable, meaning the fewer cigs the mother consumed on average, the better their baby score (which intuitively makes sense).  
 
 To determine how practically significant this effect is, we went back to the originally distribution of baby scores. A score of +285.83 does seem like a large number, but we'd have to compare this to the range of baby scores to see how much this truly is.
 
@@ -256,14 +258,14 @@ To determine how practically significant this effect is, we went back to the ori
 summary(data$bbscore)
 ```
 
-There is a huge spread in these scores. Say the baby had a mean score of 53,830. If we added 285.83 to this number, the % increase in score would only be `r (285.832/mean(data$bbscore)) * 100` percent increase. This is still a measurable increase, but it doesn't sound like as big of an increase as the score in terms of units.
+There is a huge spread in these scores. Say the baby had a mean score of 53,830. If we added 285.83 to this number, the % increase in score would only be `r (285.832/mean(data$bbscore)) * 100` percent increase. This is still a measurable increase, but it is not as large proportionally as it might initially seem.
 
 ## Model 2  
 
-In the second model, we added in more variables: mother age, father education, whether or not the baby was male, and whether or not the father was black. These are not necesarily indicators of prenatal care, but we hypothesized that adding additional variables would increase the accuracy of our model for predicting baby score. In or correlation analysis above during our exploratory data analysis, we found that feduc and fblck were the most highly correlated with baby scores of all the race and education variables. We only included one factor for race and education, as correlations between mother education and father education as well as mother race with father race would introduce increased bias to our model.
+In the second model, we added in more variables: mother age, father education, whether or not the baby was male, and whether or not the father was white, as described in the introductory data exploration. These are not necesarily indicators of prenatal care, but we hypothesized that adding additional variables correlated to our outcome variables would increase the accuracy of our model for predicting baby score. In our correlation analysis above during our exploratory data analysis, we found that feduc and fwhte were the most highly correlated with baby scores of all the race and education variables. We only included one factor for race and education, as correlations between mother education and father education as well as mother race with father race would introduce increased bias to our model.
 
 ```{R}
-model2 <- lm(bbscore ~ npvis + cigs + drink + mage + male + feduc + fblck, data = data) 
+model2 <- lm(bbscore ~ npvis + cigs + drink + mage + male + feduc + fwhte, data = data) 
 model2
 ```
   
@@ -278,9 +280,9 @@ plot(model2)
 These assumptions hold as in Model 1.
 
 #### CLM Assumption 3 
-No perfect Collinearity - To verify that this assumption  is valid we look at our new set of variables -  cigs, drink, mage, male, educ and fblck - and create a covariance matrix. 
+No perfect Collinearity - To verify that this assumption  is valid we look at our new set of variables -  `cigs`, `drink`, `mage`, `male`, `feduc` and `fwhte` - and create a covariance matrix. 
 ```{R}
-N <- data.matrix(subset(data, select=c("npvis", "cigs", "drink", "mage", "male", "feduc", "fblck" ))) 
+N <- data.matrix(subset(data, select=c("npvis", "cigs", "drink", "mage", "male", "feduc", "fwhte" ))) 
 C2 <- cov(N)
 C2
 ```
@@ -306,7 +308,7 @@ Homoskedasticity - To verify this assumption, we again look at our residuals ver
 bptest(model2)
 ```
   
-With a high p-value of 0.201, we cannot reject the null hypothesis. As it did with model 1, this assumption holds, and there is no need for robust standard errors.  
+With a high p-value of 0.1868, we cannot reject the null hypothesis. As it did with Model 1, this assumption holds, and there is no need for robust standard errors.  
 
 #### CLM Assumption 6
 Normality - As with our original model, we want to show that the population error is independent of our explanatory variables and normally distributed.
@@ -316,21 +318,21 @@ hist(model2$residuals, main = "Histogram of Residuals", breaks = 20, xlab = "Mod
 ```
 We see that the distribution resembles a normal distribution.  There is a slight negative skew, but this is nothing to worry about given the large sample size.
 
-*Analysis of Results*: 
+###Analysis of Results
 
 ```{r}
 coeftest(model2)
 ```
-Once again, the number of visits produced a significant coefficient. Holding all of these independent variables constant, the number of visits did actually go down slightly from the previous model (from + 285 to +275), likely because of adding in other variables that were causing further bias to it when these variables were omitted in model 1. These coefficients can be interpreted the same way as they were in model 1, with the exception of the indicator variables. The male coeficient (whether or not the baby was male) now has to be interpreted as: males on average received a higher baby score than females by 1,441 baby score points, holding all other variables constant. This does have a high rate of variability (standard error of 531), so this specific number may not be too accurate when looking at the true population model.
+Once again, the number of visits produced a significant coefficient. Holding all of these independent variables constant, the number of visits did actually go down slightly from the previous model (from + 285 to +274), likely because of adding in other variables that were causing further bias to it when these variables were omitted in Model 1. These coefficients can be interpreted the same way as they were in model 1, with the exception of the indicator variables. The male coeficient (whether or not the baby was male) now has to be interpreted as: males on average received a higher baby score than females by 1,436 baby score points, holding all other variables constant. This does have a high rate of variability (standard error of 530), so this specific number may not be too accurate when looking at the true population model.
 
-The standard errors produced be the mother's education (feduc) and the father being black or not (fblck) were extremely high, meaning they don't hold much weight and contain lots of variability in our model. The also do not have significant p-values. This is due to the unbalanced distributions of their variables, discussed in our correlation analysis earlier.
+The standard errors produced be the father's education (`feduc`) and the father being white or not (`fwhte`) were  high, meaning they don't hold much weight and contain lots of variability in our model. This could be due to the unbalanced distributions of their variables, discussed in our correlation analysis earlier.That said, `fwhte` did produce p-values low enough to be statistically significant, while `feduc` did not.   
 
 ## Model 3  
 
-For model 3, we built off of model 2, but added in variables we knew were correlated, hoping that although we were increasing variability because of the increased correlation in independent variables, we'd also see a more accurate model with an increased number of variables being accounted for. The variables we added were monpre (correlated with number of visits), meduc (shown to be correlated with father education), and mblck (correlated with fblck). 
+For Model 3, we built from Model 2, but added in variables we knew were correlated, hoping that although we were increasing variability because of the increased correlation in independent variables, we'd also see a more accurate model with an increased number of variables being accounted for. The variables we added were `monpre` (correlated with number of visits), `meduc` (shown to be correlated with father education), and `mwhte` (correlated with `fwhte`). 
 
 ```{R}
-model3 <- lm(bbscore ~ npvis + cigs + drink + mage + male + feduc + fblck + meduc + mblck + monpre, data = data)
+model3 <- lm(bbscore ~ npvis + cigs + drink + mage + male + feduc + fwhte + meduc + mwhte + monpre, data = data)
 model3
 ```
   
@@ -344,9 +346,9 @@ plot(model3)
 These assumptions hold as in model 1.
 
 #### CLM Assumption 3 
-No perfect Collinearity - To verify that this assumption  is valid we look at our new set of variables -  npvis, cigs, drink, mage, male, feduc, fblck,  meduc, mblck and monpre - and create a covariance matrix. 
+No perfect Collinearity - To verify that this assumption  is valid we look at our new set of variables -  `npvis`, `cigs`, `drink`, `mage`, `male`, `feduc`, `fwhte`,  `meduc`, `mwhte` and `monpre` - and create a covariance matrix. 
 ```{R}
-O<- data.matrix(subset(data, select=c("npvis", "cigs", "drink", "mage", "male", "feduc", "fblck", "meduc", "mblck", "monpre" ))) 
+O<- data.matrix(subset(data, select=c("npvis", "cigs", "drink", "mage", "male", "feduc", "fwhte", "meduc", "mwhte", "monpre" ))) 
 C3 <- cov(O)
 C3
 ```
@@ -360,7 +362,7 @@ Looking at the correlation matrix above we can verify that none of our variables
 ```{r}
 vif(model3)
 ```  
-Examining our variable inflation factors we see evidence  of multicollinearity in our model. In particular, the variables fblck and mblck have high VIFs.  This may be due to a relationship between these two variables and suggests that the incidence of parents being of the same race is not random. Also, looking back at the correlation heat map generated as part of our exploratory data analysis, we can see that correlation exists between variables feduc and meduc, as well as fblck and mblck. Based on this, this inclusion of these additional variables may have introduced bias into Model 3.
+Examining our variable inflation factors we see evidence  of multicollinearity in our model. In particular, the variables `fwhte` and `mwhte` have moderately high VIFs.  This is likely due to a relationship between these two variables and suggests that the incidence of parents being of the same race is not random. Also, looking back at the correlation heat map generated as part of our exploratory data analysis, we can see that correlation exists between variables feduc and meduc, as well as fwhte and mwhte. Based on this, this inclusion of these additional variables may have introduced bias into Model 3.
 
 #### CLM Assumption 4
 Zero Conditional Mean - Similar to models 1 and 2.  This assumption holds.
@@ -378,16 +380,17 @@ Normality - As with our original model, we want to show that the population erro
 hist(model3$residuals, main = "Histogram of Residuals", breaks = 20, xlab = "Model 3 Residuals",
      xlim = c(-60000,40000))
 ```
+
+###Analysis of Results  
 ```{r}
 coeftest(model3)
 ```
-*Analysis of Model:* 
-One needs to be very careful in interpreting the above coeficient test, as the added variability of correlated variables could be skewing the results. This model is an attempt to hold lots of factors constant, but in reality due to the correlation between some intependent variables, it's not truly able to hold them constant.
-~~~
-After the CLM analysis revealed a violation of the Gauss-Markov assumption 3, we remove one of the collinear variables, fblck, from the model and recheck the VIFs. We kept monpre in, as the VIF was surprisingly low.
+  
+One needs to be very careful in interpreting the above coeficient test, as the added variability of correlated variables could be skewing the results. This model is an attempt to hold lots of factors constant, but in reality due to the correlation between some intependent variables, it's not truly able to hold them constant.  
+After the CLM analysis revealed a violation of the Gauss-Markov assumption 3, we removed one of the collinear variables, fwhte, from the model and recheck the VIFs. We kept monpre in, as the VIF was surprisingly low.
 
 ```{R}
-model4 <- lm(bbscore ~ npvis + cigs + drink + mage + male + feduc + meduc + mblck + monpre, data = data)
+model4 <- lm(bbscore ~ npvis + cigs + drink + mage + male + feduc + meduc + mwhte + monpre, data = data)
 model4
 vif(model4)
 ```
@@ -401,22 +404,23 @@ We created the following regression table to compare our model results to each o
 stargazer(model1, model2, model3, model4, type = "text", omit.stat = "f",
           star.cutoffs = c(0.05, 0.01, 0.001))
 ```
-Given each column has the same dependent variable (baby score), we're able to directly compare these to each other. The R^2 (or how much the model explained variability in our data set) increased as we added additional variables to our model. This makes perfect sense, as adding variables can only increase this measure. It's impossible for an added variable, no matter how uncorrelated, to explain a negative amount of the variation. The adjusted R^2 accounts for added variables and penalizes the addition of variables that aren't necessarily needed. Our models are similar according to this measure, all with low levels of adjusted R^2. This means that there is more variation explained by the error term than we should have for these to be considered accurate models for predicting baby scores. We believe most of the variation can be explained by factors that weren't included in the data set, which we will cover when we discuss causality.
+Given each column has the same dependent variable (baby score), we're able to directly compare these to each other. The $R^2$ (or how much the model explained variability in our data set) increased as we added additional variables to our model. This makes perfect sense, as adding variables can only increase this measure. It's impossible for an added variable, no matter how uncorrelated, to explain a negative amount of the variation. The adjusted $R^2$ accounts for added variables and penalizes the addition of variables that aren't necessarily needed. Our models are similar according to this measure, all with low levels of adjusted $R^2$. This means that there is more variation explained by the error term than we should have for these to be considered accurate models for predicting baby scores. We believe most of the variation can be explained by factors that weren't included in the data set, which we will cover when we discuss causality.
 
-Each coeficient value for each variable fluxuated slightly between models (as expected when adding other explanatory variables), but the biggest fluctuation could be seen in the drink variable. In one of our models it showed a positive correlation, while the others showed a negative correlation. However, after viewing the extremely high standard error, this is not surprising. There simply was not enough data on mothers who did drink during pregnancy to produce an accurate model.
+Each coeficient value for each variable fluxuated slightly between models (as expected when adding other explanatory variables), but the biggest fluctuation could be seen in the `drink` variable. In one of our models it showed a positive correlation, while the others showed a negative correlation. However, after viewing the extremely high standard error, this is not surprising. There simply was not enough data on mothers who did drink during pregnancy to produce an accurate model.
 
-While the regression table allowed us to see R^2 and adjusted R^2 and differences between estimates for each model, we were also interested in analyzing the AIC. This is a measure of the relative quality of statistical models, accounting for goodness of fit that a model has while also penalizing models for having a high amount of variables used to explain it:
+While the regression table allowed us to see $R^2$ and Adjusted $R^2$ and differences between estimates for each model, we were also interested in analyzing the AIC. This is a measure of the relative quality of statistical models, accounting for goodness of fit that a model has while also penalizing models for having a high amount of variables used to explain it:
 
 ```{R}
 AIC(model1, model2, model3, model4)
 ```
-In the end, we can conclude that adding the additional variables aside from the variables in model 1 did not have much additional explanatory power, because of how weak their correlations were with this dataset.
+In the end, we can conclude that adding the additional variables aside from the variables in Model 1 did not have much additional explanatory power, because of how weak their correlations were with this dataset.
 
-*Discussion on Causality:* This is not a true experiment with randomly assigned variables and controls, so many purists would consider this unable to be interpreted causally just for that reason. Regression analyses are more about giving insight into associations between variables, and readers must be very careful about automatically assuming effects are causal. Aside from these two points, we also have reason to believe that there are enough omitted variables in this dataset that are contributing to a heavy increase in bias, meaning none of our model results should be interpreted causally. 
+###Causality 
+This is not a true experiment with randomly assigned variables and controls, so many purists would consider this unable to be interpreted causally just for that reason. Regression analyses are more about giving insight into associations between variables, and readers must be very careful about automatically assuming effects are causal. Aside from these two points, we also have reason to believe that there are enough omitted variables in this dataset that are contributing to a heavy increase in bias, meaning none of our model results should be interpreted causally.  
 
 It's important to remember that we're not working within the true population model, and that these are just sample models. By not including some of the variables that are likely to be a part of the true population model, we're introducing bias into our error term, which is either artificially lowering or increasing values of the coefficients in our sample (when in the true population model, the coefficients wouldn't have these values). 
 
-In this dataset, we were not given any kind of data about the number of prenatal supplements the mother took, which most studies show is beneficial for the baby's health. Because this was not included when it should have been in analyzing the impact of prenatal care, we analyzed how not having this impacted our model 1 results to the "number of visits" coefficient. Our population model should have looked something like this instead of what we originally had for model 1:
+In this dataset, we were not given any kind of data about the number of prenatal supplements the mother took, which most studies show is beneficial for the baby's health. Because this was not included when it should have been in analyzing the impact of prenatal care, we analyzed how not having this impacted our model 1 results to the "number of visits" coefficient. Our population model should have looked something like this instead of what we originally had for Model 1:
 
 Population Model Baby Scores = intercept + npvis + cigs + drink + *number of prenatal vitamins* + error
 
@@ -433,3 +437,4 @@ We also have to be careful about the directions of these results (the dependent 
 In summary, the ceteris paribus assumption is key here, as it holds all of the variables we included in the model (other than the error term) constant, but NOT the error term. But if there's another factor in our error term that is correlated with one of our variables, this increases our risk of producing an inaccurate model that cannot be interpreted causally. 
 
 #Conclusion
+In conclusion, we can state that prenatal health care measures are generally associated with healthier babies. However, other variables also showed correlation with positive health outcomes.
