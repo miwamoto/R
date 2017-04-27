@@ -84,7 +84,7 @@ As described above, our modeling process focuses on using APGAR scores and birth
 data$premonths = 9 - data$monpre
 ```
   
-*Number of Months of Prenatal Care:* This variable is calculated from "data\$monpre", which is the month in which prenatal care began by subtracting "data\$monpre" from 9 months. The median length of prenatal care is `r round(median(data$premonths),2)`, and the data displays a heavy negative skew, indicating that most mothers in the sample begin receiving prenatal care early in their pregnancies.  
+*Number of Months of Prenatal Care:* This variable is calculated from `monpre`, which is the month in which prenatal care began, by subtracting `monpre` from 9 months. The median length of prenatal care is `r round(median(data$premonths),2)`, and the data displays a heavy negative skew, indicating that most mothers in the sample begin receiving prenatal care early in their pregnancies.  
 
 *Number of Prenatal Visits:* This variable exhibits a wide distribution curve with a sharp spike at 12 visits. Doctors generally recommend a prenatal checkup schedule of one visit per month during the first 6-7 months of pregnancy, followed by more frequent visits in the weeks leading up to delivery. The observed spike is likely the result of a large number of mothers in the sample following this recommendation or a similar schedule. The sample also includes 26 observations with more than 20 prenatal visits, up to a maximum of 40 visits. These outliers could represent difficult pregnancies that required additional medical care, errors in data collection, or both. However, these cases are not excluded from analysis because the large spike in observations at 12 visits limits the effects of these outliers on the sample average. 
 
@@ -96,15 +96,14 @@ hist(data$premonths, breaks = seq(-0.5,9.5,by=1), xlim = c(0,10),
      main = "Histogram of Months of Care", xlab = "Months of prenatal care received")
 ```
   
+One key point to observe about these two variables is that they are correlated with each other. The scatterplot below shows a clear linear relationship between the variables.  
 ```{r}
 scatterplot(jitter(data$premonths), jitter(data$npvis))
 ```
-```{r}
-cor(data$premonths, data$npvis, use = "complete.obs")
-```
-Based on the plot and calculations above, there appears to be a moderate positive correlation between the number of months of prenatal care received and the number of prenatal visits. This is quite natural; expectant mothers who begin care early have more time to visit the doctor before they give birth. The two variables have a moderate correlation, so including them both as predictor variables in the same model would not strictly violate the assumption regarding perfect multicollinearity, but doing so would increase the bias of the model because some number prenatal visits could potentially be explained by duration of care.  
+  
+There appears to be a moderate positive correlation between the number of months of prenatal care received and the number of prenatal visits (`r round(cor(data$premonths, data$npvis, use = "complete.obs"),4)`). This is quite natural; expectant mothers who begin care early have more time to visit the doctor before they give birth. The two variables have a moderate correlation, so including them both as predictor variables in the same model would not strictly violate the assumption regarding perfect multicollinearity, but doing so would increase the bias of the model because some number prenatal visits could potentially be explained by duration of care.  
 
-We did notice that there were two cases where the mother started getting prenatal care very late (in the last month of her pregnancy), yet visited the doctor 30 times. We thought this was strange, so we analyzed these two data points closer to see if we could find anything else regarding these two data points that would require them to be removed:
+We did notice that there were two cases where the mother started getting prenatal care very late (in the last month of her pregnancy), yet visited the doctor 30 times. We thought this was strange, so we examined these two data points more closely to see if we could find anything else regarding these two data points that would require them to be removed:
 
 ```{r}
 data[!is.na(data$npvis) & data$npvis >=30 & data$premonths == 1,]
