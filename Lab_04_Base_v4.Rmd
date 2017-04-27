@@ -399,10 +399,17 @@ We created the following regression table to compare our model results to each o
 stargazer(model1, model2, model3, model4, type = "text", omit.stat = "f",
           star.cutoffs = c(0.05, 0.01, 0.001))
 ```
+Given each column has the same dependent variable (baby score), we're able to directly compare these to each other. The R^2 (or how much the model explained variability in our data set) increased as we added additional variables to our model. This makes perfect sense, as adding variables can only increase this measure. It's impossible for an added variable, no matter how uncorrelated, to explain a negative amount of the variation. The adjusted R^2 accounts for added variables and penalizes the addition of variables that aren't necessarily needed. Our models are similar according to this measure, all with low levels of adjusted R^2. This means that there is more variation explained by the error term than we should have for these to be considered accurate models for predicting baby scores. We believe most of the variation can be explained by factors that weren't included in the data set, which we will cover when we discuss causality.
+
+Each coeficient value for each variable fluxuated slightly between models (as expected when adding other explanatory variables), but the biggest fluctuation could be seen in the drink variable. In one of our models it showed a positive correlation, while the others showed a negative correlation. However, after viewing the extremely high standard error, this is not surprising. There simply was not enough data on mothers who did drink during pregnancy to produce an accurate model.
+
+While the regression table allowed us to see R^2 and adjusted R^2 and differences between estimates for each model, we were also interested in analyzing the AIC. This is a measure of the relative quality of statistical models, accounting for goodness of fit that a model has while also penalizing models for having a high amount of variables used to explain it:
 
 ```{R}
 AIC(model1, model2, model3, model4)
 ```
+In the end, we can conclude that adding the additional variables aside from the variables in model 1 did not have much additional explanatory power, because of how weak their correlations were with this dataset.
+
 *Discussion on Causality:* This is not a true experiment with randomly assigned variables and controls, so many purists would consider this unable to be interpreted causally just for that reason. Regression analyses are more about giving insight into associations between variables, and readers must be very careful about automatically assuming effects are causal. Aside from these two points, we also have reason to believe that there are enough omitted variables in this dataset that are contributing to a heavy increase in bias, meaning none of our model results should be interpreted causally. 
 
 It's important to remember that we're not working within the true population model, and that these are just sample models. By not including some of the variables that are likely to be a part of the true population model, we're introducing bias into our error term, which is either artificially lowering or increasing values of the coefficients in our sample (when in the true population model, the coefficients wouldn't have these values). 
