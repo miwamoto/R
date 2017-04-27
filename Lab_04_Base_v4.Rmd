@@ -9,7 +9,7 @@ output: pdf_document
 # Introduction
 This study explores the relationship between prenatal health care and health outcomes for newborn infants. Data for the study includes information gathered by the National Center for Health Statistics and birth certificate records. The study explores the available data and applies linear regression modeling to evaluate the relationship between the various variables in the dataset and the key outcome variables, birthweight and APGAR scores.  
 
-```{r}
+```{r, include=FALSE}
 library(car)
 library(ggplot2)
 library(reshape2)
@@ -22,7 +22,7 @@ desc
 
 # Data Exploration and Model Building Process
 
-In the following analysis, we excluded any mothers under the age of 18 and over the age of 35, as there are widely known health complications within these ages. It's important to note that because of this restriction, our models provided are for babies with mothers over age 18 and under age 35 only. These may vary for mothers outside these age ranges, but executing the models this way mitigated the risk of having mothers in our dataset whose baby scores were more of a factor of their age than the amount of prenatal care they received. We also only included complese cases from the sample, so that unknown variables of bad data would not impact our regression.
+In the following analysis, we excluded any mothers under the age of 18 and over the age of 35, as there are widely known health complications within these ages. It's important to note that because of this restriction, our models provided are for babies with mothers over age 18 and under age 35 only. These may vary for mothers outside these age ranges, but executing the models this way mitigates the risk of having mothers in our dataset whose baby scores were more a factor of their age than the amount of prenatal care they received. We also only included complete cases from the sample, so that unknown variables or bad data would not impact our regression.
 
 ```{R}
 data <- data[data$mage > 18 & data$mage < 35,]
@@ -31,7 +31,7 @@ data <- na.exclude(data, complete.cases(data))
 
 ## Baby Health Outcomes
 
-*Birth Weight:* Observations of birth weight in the sample are almost normally distributed, with a slight negative skew. Mean and median birth weight are both approximately 3.4 kg. While the lowest birth weight in the sample is very low at 360 grams, a recap of the data indicates that there are six observations with recorded birth weights below 1 kg. Babies born prematurely can exhibit very low birth weights, so we chose not to exclude these records from analysis.  
+*Birth Weight:* Observations of birth weight in the sample are almost normally distributed, with a slight negative skew. Mean and median birth weight are both approximately 3.4 kg. While the lowest birth weight in the sample is very low at 360 grams, a recap of the data indicates that there are six observations with recorded birth weights below 1 kg. Babies born prematurely can exhibit very low birth weights, so these do not appear to be data collection errors, and we chose not to exclude these records from analysis.  
 
 ```{r}
 summary(data$bwght)
@@ -41,7 +41,8 @@ hist(data$bwght, breaks = 20, main = "Histogram of Birth Weight", ylim = c(0,300
      xlab = "Birth weight in grams")
 ```
   
-*APGAR Scores:* APGAR Scores in this dataset were strongly negatively skewed. The one minute APGAR had slightly more variation than the 5 minute, as `r sum(data$fmaps == 9, na.rm = T)/length(data$fmaps) * 100` percent of the 5 minute APGAR scores were a 9, and only `r sum(data$omaps == 9, na.rm = T)/length(data$omaps) * 100` percent of 1 minute APGAR scores were a score of 9 (also the mode, but scores in this 1 minute APGAR had more variation). After researching the meaning of the APGAR scores, we felt it necessary to include these in our measure for baby health, as they are meant to be a quick assessment on how the baby is doing outside the womb.  
+*APGAR Scores:* APGAR Scores in this dataset were strongly negatively skewed. The one minute APGAR had slightly more variation than the 5 minute, as `r round(sum(data$fmaps == 9, na.rm = T)/length(data$fmaps) * 100, 2)` percent of the 5 minute APGAR scores were a 9, and only `r round(sum(data$omaps == 9, na.rm = T)/length(data$omaps) * 100, 2)` percent of 1 minute APGAR scores were a score of 9 (also the mode, but scores in this 1 minute APGAR had more variation). After researching the meaning of the APGAR scores, we felt it necessary to include these in our measure for baby health, as they are meant to be a quick assessment on how the baby is doing outside the womb.  
+
 Summary of 5-Minute APGAR Scores:
 ```{R}
 summary(data$fmaps)
@@ -75,10 +76,10 @@ hist(data$bbscore, breaks = 50, main = "Histogram of Baby Health (bbscore)", xla
 summary(data$bbscore)
 ```
 
-It's important to note that this baby score variable is not a perfect indicator of baby health, but for the reasons outlined above, it is a better measure than simply using birthweight alone. If we had only used birthweight, we would essentially be saying that the heavier the baby, the healtier it is, and this is not always true. Multiplying their birthweight number by APGAR allows compensates for bigger babies who may have a lower health score. 
+It's important to note that this baby score variable is not a perfect indicator of baby health, but for the reasons outlined above, it is a better measure than simply using birthweight alone. If we had only used birthweight, we would essentially be saying that the heavier the baby, the healtier it is, and this is not always true. Multiplying their birthweight number by APGAR compensates for bigger babies who may have a lower health score. 
   
 ## Primary Predictor Variables
-As described above, our modeling process focuses on using APGAR scores and birth weight to measure health outcomes. Reviewing the data available, the two variables most associated with prenatal medical care are the number of prenatal visits (npvis) and the month of the pregnancy in which prenatal care began (monpre). For purposes of modeling, we can create a new variable to measure the number of months of prenatal care received.  
+As described above, our modeling process focuses on using APGAR scores and birth weight to measure health outcomes. Reviewing the data available, the two variables most associated with prenatal medical care are the number of prenatal visits (`npvis`) and the month of the pregnancy in which prenatal care began (`monpre`). For purposes of modeling, we can create a new variable to measure the number of months of prenatal care received.  
 ```{r}
 data$premonths = 9 - data$monpre
 ```
@@ -368,7 +369,7 @@ Homoskedasticity - To verify this assumption, we again look at our residuals ver
 ```{R}
 bptest(model3)
 ```
-Similar to what we saw in the other models, we can assume homoskedasticity
+Similar to what we saw in the other models, we can assume homoskedasticity.
 
 #### CLM Assumption 6
 Normality - As with our original model, we want to show that the population error is independent of our explanatory variables and normally distributed.
